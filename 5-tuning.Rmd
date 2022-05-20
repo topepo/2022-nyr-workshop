@@ -115,7 +115,7 @@ class: inverse, middle, center
 ---
 # Tuning parameters
 
-These are model or preprocessing parameters that are important but cannot be estimated directly form the data. 
+These are model or preprocessing parameters that are important but cannot be estimated directly from the data. 
 
 Some examples:
 
@@ -150,7 +150,7 @@ The main two classes of optimization models are:
  
  * _Iterative search_ methods suggest/estimate new values of candidate parameters to evaluate. 
 
-Once the value(s) of the parameter(s) are determine, a model can be finalized but fitting the model to the entire training set. 
+Once the value(s) of the parameter(s) are determined, a model can be finalized but fitting the model to the entire training set. 
 
 
 ---
