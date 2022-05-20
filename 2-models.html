@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Creating Models</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Max Kuhn" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# Creating Models
+
+## Max Kuhn
+
+### New York R Conference
+
+### Repo: [https://github.com/topepo/2022-nyr-workshop](https://github.com/topepo/https://github.com/topepo/2022-nyr-workshop)
+
+]
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+---
+# Define the score of "The Model" 
+
+In tidymodels, there is the idea that a model-oriented data analysis consists of
+
+ - a preprocessor, and 
+ - a model
+ 
+The preprocessor might be a simple formula or a sophisticated recipe.  
+
+It's important to consider both of these activities as part of the data analysis process.
+
+ - Post-model activities should also be included there (e.g. calibration, cut-off optimization, etc.)
+ - We don't have those implemented yet. 
+
+
+---
+# Basic tidymodels components
+
+&lt;img src="images/blocks.png" width="70%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# A relevant example
+
+Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data. 
+
+ - AKA principal component regression
+ 
+---
+# A relevant example
+
+Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data. 
+
+ - AKA ~~principal component regression~~ feature extraction
+
+
+---
+# A relevant example
+
+Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data. 
+
+ - AKA ~~principal component regression~~ feature extraction
+
+What do we consider the estimation part of this process? 
+
+
+---
+# Is it this? 
+
+&lt;img src="images/faux-model.svg" width="70%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Or is it this? 
+
+&lt;img src="images/the-model.svg" width="70%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# What's the difference?
+
+It is easy to think that the model fit is the only estimation steps. 
+
+There are cases where this could go really wrong: 
+
+* Poor estimation of performance (buy treating the PCA parts as known)
+
+* Selection bias in feature selection
+
+* Information leakage
+
+These problems are exacerbated as the preprocessors increase in complexity and/or effectiveness. 
+
+_We'll come back to this at the end of this section_
+
+---
+layout: false
+class: inverse, middle, center
+
+# Data splitting
+
+---
+layout: false
+class: inverse, middle, center
+background-color: #FFFFFF
+
+# &lt;span style="color:Black;"&gt;Always have a separate piece of data that can &lt;span style="color:Red;"&gt;&lt;b&gt;contradict&lt;/b&gt;&lt;/span&gt; what you &lt;span style="color:Blue;"&gt;&lt;b&gt;believe&lt;/b&gt;&lt;/span&gt;&lt;/span&gt;
+
+
+
+---
+
+# Data splitting and spending
+
+How do we "spend" the data to find an optimal model? 
+
+We _typically_ split data into training and test data sets:
+
+*  ***Training Set***: these data are used to estimate model parameters and to pick the values of the complexity parameter(s) for the model.
+
+*  ***Test Set***: these data can be used to get an independent assessment of model efficacy. **They should not be used during model training** (like, at all). 
+
+
+---
+
+# Data splitting and spending 
+
+The more data we spend, the better estimates we'll get (provided the data is accurate).  
+
+Given a fixed amount of data:
+
+* Too much spent in training won't allow us to get a good assessment of predictive performance.  We may find a model that fits the training data very well, but is not generalizable (overfitting)
+
+* Too much spent in testing won't allow us to get a good assessment of model parameters
+
+Statistically, the best course of action would be to use all the data for model building and use statistical methods to get good estimates of error.
+
+From a non-statistical perspective, many consumers of complex models emphasize the need for an untouched set of samples to evaluate performance.
+
+
+---
+
+# Large data sets
+
+When a large amount of data are available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure. 
+
+Alternatively, it is probably a better idea to reserve good percentages of the data for specific parts of the modeling process. For example: 
+
+* Save a large chunk of data to perform feature selection prior to model building
+* Retain data to calibrate class probabilities or determine a cutoff via an ROC curve. 
+
+Also, there may be little need for iterative resampling of the data. A single holdout (aka validation set) may be sufficient in some cases if the data are large enough and the data sampling mechanism is solid.  
+
+
+---
+
+# Mechanics of data splitting
+
+There are a few different ways to do the split: simple random sampling, _stratified sampling based on the outcome_, by date, or methods that focus on the distribution of the predictors.
+
+For stratification:
+
+* **classification**: this would mean sampling within the classes to preserve the distribution of the outcome in the training and test sets
+
+* **regression**: determine the quartiles of the data set and sample within those artificial groups
+
+For _time series_, we often use the most recent data as the test set. 
+
+---
+
+# Splitting with NHL data &lt;img src="images/rsample.svg" class="title-hex"&gt;&lt;img src="images/dplyr.png" class="title-hex"&gt;
+
+`initial_split()` can be used when we use randomness to make the split.
+
+
+```r
+library(tidymodels)
+library(ongoal)
+
+tidymodels_prefer()
+
+on_goal &lt;- on_goal %&gt;% filter(season == "20152016") %&gt;% select(-season)
+
+nhl_split &lt;- initial_split(on_goal, prop = 3/4)
+nhl_split
+#&gt; &lt;Analysis/Assess/Total&gt;
+#&gt; &lt;9110/3037/12147&gt;
+
+nhl_train &lt;- training(nhl_split)
+nhl_test  &lt;- testing(nhl_split)
+
+c(training = nrow(nhl_train), testing = nrow(nhl_test))
+#&gt; training  testing 
+#&gt;     9110     3037
+```
+
+
+---
+layout: false
+class: inverse, middle, center
+
+#  Creating models in R
+
+
+---
+
+# Specifying models in R using formulas
+
+To fit a model to the housing data, the model terms must be specified. Historically, there are two main interfaces for doing this. 
+
+The **formula** interface using R [formula rules](https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Formulae-for-statistical-models) to specify a _symbolic_ representation of the terms:
+
+Variables + interactions
+
+
+```r
+model_fn(on_goal ~ strength + angle + strength:angle, data = nhl_train)
+```
+
+Shorthand for all predictors
+
+
+```r
+model_fn(on_goal ~ ., data = nhl_train)
+```
+
+Inline functions / transformations
+
+
+```r
+model_fn(log10(on_goal) ~ ns(angle, df = 3) + ., data = nhl_train)
+```
+
+---
+
+# Downsides to formulas
+
+* You can't nest in-line functions such as `model_fn(y ~ pca(scale(x1), scale(x2), scale(x3)), data = dat)`.
+
+* All the model matrix calculations happen at once and can't be recycled when used in a model function. 
+
+* For very _wide_ data sets, the formula method can be [extremely inefficient](https://rviews.rstudio.com/2017/03/01/the-r-formula-method-the-bad-parts/). 
+
+* There are limited _roles_ that variables can take which has led to several re-implementations of formulas. 
+
+* Specifying multivariate outcomes is clunky and inelegant.
+
+* Not all modeling functions have a formula method (consistency!). 
+
+---
+
+# Specifying models without formulas
+
+Some modeling function have a non-formula (XY) interface. This usually has arguments for the predictors and the outcome(s):
+
+
+```r
+# Usually, the variables must all be numeric
+pre_vars &lt;- c("strength", "distance", "angle")
+model_fn(x = nhl_train[, pre_vars],
+         y = nhl_train$on_goal)
+```
+
+This is inconvenient if you have transformations, factor variables, interactions, or any other operations to apply to the data prior to modeling. 
+
+Overall, it is difficult to predict if a package has one or both of these interfaces. For example, `lm` only has formulas. 
+
+There is a **third interface**, using _recipes_ that will be discussed later that solves some of these issues. 
+
+---
+
+# A linear regression model 
+
+Let's start by fitting an ordinary linear regression model to the training set. You can choose the model terms for your model, but I will use a very simple model:
+
+
+```r
+simple_glm &lt;- glm(on_goal ~ distance + strength, data = nhl_train, family = binomial())
+```
+
+Before looking at coefficients, we should do some model checking to see if there is anything obviously wrong with the model. 
+
+To get the statistics on the individual data points, we will use the awesome `broom` package:
+
+
+```r
+simple_glm_values &lt;- augment(simple_glm)
+names(simple_glm_values)
+#&gt; [1] "on_goal"    "distance"   "strength"   ".fitted"    ".resid"     ".std.resid"
+#&gt; [7] ".hat"       ".sigma"     ".cooksd"
+```
+
+---
+layout: false
+class: inverse, middle, center
+
+#  Fitting via tidymodels
+
+---
+# The parsnip package
+
+.pull-left-a-lot[
+
+- A tidy unified _interface_ to models
+
+- `lm()` isn't the only way to perform linear regression
+  
+  - &lt;span class="pkg"&gt;glmnet&lt;/span&gt; for regularized regression
+  - &lt;span class="pkg"&gt;stan&lt;/span&gt; for Bayesian regression
+  - &lt;span class="pkg"&gt;keras&lt;/span&gt; for regression using tensorflow
+  
+- But...remember the consistency slide?
+
+  - Each interface has its own minutiae to remember
+  - &lt;span class="pkg"&gt;parsnip&lt;/span&gt; standardizes all that!
+]
+.pull-right-a-little[
+
+&lt;img src="images/all_the_models.jpeg" width="95%" style="display: block; margin: auto;" /&gt;
+
+]
+
+  
+---
+
+# parsnip in action &lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+.pull-left[
+
+1) Create specification
+
+2) Set the engine
+
+3) Fit the model
+
+
+```r
+spec_log_reg &lt;- logistic_reg()
+spec_log_reg
+#&gt; Logistic Regression Model Specification (classification)
+#&gt; 
+#&gt; Computational engine: glm
+
+spec_glm &lt;- spec_log_reg %&gt;% set_engine("glm")
+spec_glm
+#&gt; Logistic Regression Model Specification (classification)
+#&gt; 
+#&gt; Computational engine: glm
+```
+
+]
+
+.pull-right[
+
+
+```r
+fit_lm &lt;- fit(
+  spec_glm,
+  on_goal ~ distance + strength,
+  data = nhl_train
+)
+
+fit_lm
+#&gt; parsnip model object
+#&gt; 
+#&gt; 
+#&gt; Call:  stats::glm(formula = on_goal ~ distance + strength, family = stats::binomial, 
+#&gt;     data = data)
+#&gt; 
+#&gt; Coefficients:
+#&gt;               (Intercept)                   distance  strengtheven_short_handed  
+#&gt;                  -0.01548                   -0.00555                   10.88236  
+#&gt;        strengthpower_play       strengthshort_handed  
+#&gt;                  -0.75775                   -0.84678  
+#&gt; 
+#&gt; Degrees of Freedom: 9109 Total (i.e. Null);  9105 Residual
+#&gt; Null Deviance:	    12500 
+#&gt; Residual Deviance: 12500 	AIC: 12500
+```
+
+Note: Models have default engines. We don't really need to use `set_engine("glm")` for this example. 
+
+
+]
+
+
+---
+
+# Alternative engines &lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+With &lt;span class="pkg"&gt;parsnip&lt;/span&gt;, it is easy to switch to a different engine, like Stan, to run the
+same model with alternative backends.
+
+
+```r
+spec_stan &lt;- 
+  spec_log_reg %&gt;%
+  # Engine specific arguments are 
+  # passed through here
+  set_engine("stan", chains = 4, iter = 5000, seed = 1)
+
+# Otherwise, code looks exactly the same!
+fit_stan &lt;- fit(
+  spec_stan,
+  on_goal ~ distance + strength,
+  data = nhl_train
+)
+ 
+coef(fit_stan$fit)
+#&gt;               (Intercept)                  distance strengtheven_short_handed 
+#&gt;                 -0.015440                 -0.005557                164.037826 
+#&gt;        strengthpower_play      strengthshort_handed 
+#&gt;                 -0.803264                 -1.093221
+
+coef(fit_lm$fit)
+#&gt;               (Intercept)                  distance strengtheven_short_handed 
+#&gt;                  -0.01548                  -0.00555                  10.88236 
+#&gt;        strengthpower_play      strengthshort_handed 
+#&gt;                  -0.75775                  -0.84678
+```
+
+
+---
+# Duplicate computations
+
+Note that, for both of these fits, some of the computations are repeated. 
+
+For example, the formula method does a fair amount of work to figure out how to turn the data frame into a matrix of predictors. 
+
+When there are special effects (e.g. splines), dummy variables, interactions, or other components, the formula/terms objects have to keep track of everything. 
+
+In cases where there are a lot of _predictors_, these computations can consume a lot of resources. If we can save them, that would be helpful. 
+
+The answer is a _workflow_ object. These bundle together a preprocessor (such as a formula) along with a model. 
+
+
+---
+# A modeling _workflow_  &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+We can _optionally_ bundle the recipe and model together into a &lt;span style="color:LightGray;"&gt;&lt;strike&gt;pipeline&lt;/strike&gt;&lt;/span&gt; _workflow_:
+
+
+```r
+cls_wflow &lt;- 
+  workflow() %&gt;%    # attached with the tidymodels package
+  add_model(spec_glm) %&gt;% 
+  add_formula(on_goal ~ distance + strength) # or add_recipe() or add_variables()
+
+cls_fit &lt;- fit(cls_wflow, data = nhl_train)
+cls_fit
+#&gt; ══ Workflow [trained] ═══════════════════════════════════════════════════════════════
+#&gt; Preprocessor: Formula
+#&gt; Model: logistic_reg()
+#&gt; 
+#&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
+#&gt; on_goal ~ distance + strength
+#&gt; 
+#&gt; ── Model ────────────────────────────────────────────────────────────────────────────
+#&gt; 
+#&gt; Call:  stats::glm(formula = ..y ~ ., family = stats::binomial, data = data)
+#&gt; 
+#&gt; Coefficients:
+#&gt;               (Intercept)                   distance  strengtheven_short_handed  
+#&gt;                  -0.01548                   -0.00555                   10.88236  
+#&gt;        strengthpower_play       strengthshort_handed  
+#&gt;                  -0.75775                   -0.84678  
+#&gt; 
+#&gt; Degrees of Freedom: 9109 Total (i.e. Null);  9105 Residual
+#&gt; Null Deviance:	    12500 
+#&gt; Residual Deviance: 12500 	AIC: 12500
+```
+
+
+---
+# Swapping models  &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+
+```r
+stan_wflow &lt;- 
+  cls_wflow %&gt;% 
+  update_model(spec_stan)
+
+set.seed(21)
+stan_fit &lt;- fit(stan_wflow, data = nhl_train)
+stan_fit
+#&gt; ══ Workflow [trained] ═══════════════════════════════════════════════════════════════
+#&gt; Preprocessor: Formula
+#&gt; Model: logistic_reg()
+#&gt; 
+#&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
+#&gt; on_goal ~ distance + strength
+#&gt; 
+#&gt; ── Model ────────────────────────────────────────────────────────────────────────────
+#&gt; stan_glm
+#&gt;  family:       binomial [logit]
+#&gt;  formula:      ..y ~ .
+#&gt;  observations: 9110
+#&gt;  predictors:   5
+#&gt; ------
+#&gt;                           Median MAD_SD
+#&gt; (Intercept)                 0.0    0.0 
+#&gt; distance                    0.0    0.0 
+#&gt; strengtheven_short_handed 164.0  142.7 
+#&gt; strengthpower_play         -0.8    0.6 
+#&gt; strengthshort_handed       -1.1    1.3 
+#&gt; 
+#&gt; ------
+#&gt; * For help interpreting the printed output see ?print.stanreg
+#&gt; * For info on the priors used see ?prior_summary.stanreg
+```
+
+---
+# Workflows
+
+Once the first model is fit, the preprocessor (i.e. the formula) is processed and the model matrix is formed. 
+
+New models don't need to repeat those computations. 
+
+Some other nice features: 
+
+* Workflows are smarter with data than `model.matrix()` in terms of new factor levels. 
+* Other preprocessors can be used: recipes and `dplyr::select()` statements (that do no data processing).
+* As will be seen later, they can help organize your work when a sequence of models are used. 
+* A workflow captures the entire modeling process (mentioned earlier) and a simple `fit()` and `predict()` sequence are used for all of the estimation parts. 
+
+---
+# Using workflows to predict  &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+
+```r
+# generate some bogus data (instead of using the training or test sets)
+set.seed(3)
+shuffled_data &lt;- map_dfc(nhl_train, ~ sample(.x, size = 10))
+
+predict(stan_fit, shuffled_data) %&gt;% slice(1:3)
+#&gt; # A tibble: 3 × 1
+#&gt;   .pred_class
+#&gt;   &lt;fct&gt;      
+#&gt; 1 yes        
+#&gt; 2 yes        
+#&gt; 3 yes
+predict(stan_fit, shuffled_data, type = "pred_int") %&gt;% slice(1:3)
+#&gt; # A tibble: 3 × 4
+#&gt;   .pred_lower_yes .pred_upper_yes .pred_lower_no .pred_upper_no
+#&gt;             &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;
+#&gt; 1               0               1              0              1
+#&gt; 2               0               1              0              1
+#&gt; 3               0               1              0              1
+```
+
+---
+# The tidymodels prediction guarantee!
+
+
+.pull-left-a-lot[
+
+* The predictions will always be inside a **tibble**.
+* The column names and types are **unsurprising**.
+* The number of rows in `new_data` and the output **are the same**. 
+
+]
+.pull-right-a-little[
+
+&lt;img src="images/guarantee.png" width="95%" style="display: block; margin: auto;" /&gt;
+
+]
+
+This enables the use of `bind_cols()` to combine the original data and the predictions. 
+
+
+---
+# Evaluating models  &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+tidymodels has a [lot of performance metrics](https://yardstick.tidymodels.org/reference/index.html) for different types of models (e.g. binary classification, etc). 
+
+Each takes a tibble as an input along with the observed and predicted column names: 
+
+
+```r
+pred_results &lt;- 
+  predict(stan_fit, shuffled_data) %&gt;% 
+  bind_cols(predict(stan_fit, shuffled_data, type = "prob")) %&gt;% 
+  bind_cols(shuffled_data)
+
+# Data was randomized; these results should be bad
+pred_results %&gt;% roc_auc(truth = on_goal, .pred_no)
+#&gt; # A tibble: 1 × 3
+#&gt;   .metric .estimator .estimate
+#&gt;   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
+#&gt; 1 roc_auc binary           0.5
+```
+
+
+---
+# Multiple metrics/KPIs &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+A _metric set_ can bundle multiple statistics: 
+
+
+```r
+cls_metrics &lt;- metric_set(roc_auc, accuracy)
+
+# A tidy format of the results
+pred_results %&gt;% cls_metrics(truth = on_goal, estimate = .pred_class, .pred_no)
+#&gt; # A tibble: 2 × 3
+#&gt;   .metric  .estimator .estimate
+#&gt;   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+#&gt; 1 accuracy binary           0.6
+#&gt; 2 roc_auc  binary           0.5
+```
+
+
+---
+# broom methods &lt;img src="images/broom.svg" class="title-hex"&gt;
+
+&lt;span class="pkg"&gt;parsnip&lt;/span&gt; and &lt;span class="pkg"&gt;workflow&lt;/span&gt; fits have corresponding &lt;span class="pkg"&gt;broom&lt;/span&gt; tidiers: 
+
+
+```r
+glance(cls_fit)
+#&gt; # A tibble: 1 × 8
+#&gt;   null.deviance df.null logLik    AIC    BIC deviance df.residual  nobs
+#&gt;           &lt;dbl&gt;   &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;       &lt;int&gt; &lt;int&gt;
+#&gt; 1        12542.    9109 -6259. 12528. 12563.   12518.        9105  9110
+tidy(cls_fit)
+#&gt; # A tibble: 5 × 5
+#&gt;   term                      estimate std.error statistic    p.value
+#&gt;   &lt;chr&gt;                        &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;
+#&gt; 1 (Intercept)               -0.0155    0.0454    -0.341  0.733     
+#&gt; 2 distance                  -0.00555   0.00125   -4.46   0.00000831
+#&gt; 3 strengtheven_short_handed 10.9     119.         0.0911 0.927     
+#&gt; 4 strengthpower_play        -0.758     0.592     -1.28   0.201     
+#&gt; 5 strengthshort_handed      -0.847     1.16      -0.733  0.464
+```
+
+---
+# broom methods &lt;img src="images/broom.svg" class="title-hex"&gt;
+
+For `augment()` we require the data to predict and attach
+
+
+```r
+augment(cls_fit, shuffled_data %&gt;% select(distance, strength, on_goal))
+#&gt; # A tibble: 10 × 6
+#&gt;   distance strength on_goal .pred_class .pred_yes .pred_no
+#&gt;      &lt;dbl&gt; &lt;fct&gt;    &lt;fct&gt;   &lt;fct&gt;           &lt;dbl&gt;    &lt;dbl&gt;
+#&gt; 1    21.0  even     no      yes             0.533    0.467
+#&gt; 2    30.1  even     yes     yes             0.545    0.455
+#&gt; 3    20.1  even     no      yes             0.532    0.468
+#&gt; 4    15.3  even     yes     yes             0.525    0.475
+#&gt; 5     9.85 even     no      yes             0.518    0.482
+#&gt; 6    18.9  even     yes     yes             0.530    0.470
+#&gt; # … with 4 more rows
+```
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc(%current% / %total% * 100%);\">\n  </div>\n</div>\n",
+"highlightStyle": "rainbow",
+"highlightLanguage": ["r", "css", "yaml"],
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

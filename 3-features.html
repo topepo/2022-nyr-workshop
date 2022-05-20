@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Feature engineering</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Max Kuhn" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# Feature engineering
+
+## Max Kuhn
+
+### New York R Conference
+
+### Repo: [https://github.com/topepo/2022-nyr-workshop](https://github.com/topepo/https://github.com/topepo/2022-nyr-workshop)
+
+]
+
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+---
+# What is feature engineering?
+
+First thing's first: what's a feature? 
+
+I tend to think of a feature as some representation of a predictor that will be used in a model. 
+
+Old-school features: 
+
+ * Interactions
+ * Polynomial expansions/splines
+ * PCA feature extraction
+ 
+"Feature engineering" sounds pretty cool, but let's take a minute to talk about _preprocessing_ data.  
+
+---
+# Two types of preprocessing
+
+&lt;img src="images/fe_venn.svg" width="75%" style="display: block; margin: auto;" /&gt;
+
+---
+# Two types of preprocessing
+
+&lt;img src="images/fe_venn_info.svg" width="75%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Easy examples
+
+For example, centering and scaling are definitely not feature engineering.
+
+Consider the `date` field in the data. If given as a raw predictor, it is converted to an integer. 
+
+It can be re-encoded as:
+
+* Days since a reference date 
+* Day of the week
+* Month
+* Year
+* Indicators for holidays
+
+
+---
+# Original column
+
+&lt;img src="images/steve.gif" width="35%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Features
+
+&lt;img src="images/cap.png" width="75%" style="display: block; margin: auto;" /&gt;
+
+
+(At least that's what we hope the difference looks like.)
+
+
+---
+# General definitions
+
+* _Data preprocessing_ are the steps that you take to make your model successful. 
+
+* _Feature engineering_ are what you do to the original predictors to make the model do the least work to predict the outcome as well as possible. 
+
+We'll demonstrate the &lt;span class="pkg"&gt;recipes&lt;/span&gt; package for all of your data needs. 
+
+---
+# Recipes prepare your data for modeling
+
+The package is extensible framework for pipeable sequences of feature engineering steps provides preprocessing tools to be applied to data. 
+    
+Statistical parameters for the steps can be estimated from an initial data set and then applied to other data sets. 
+    
+The resulting processed output can then be used as inputs for statistical or machine learning models.
+
+---
+# A first recipe &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train)
+
+# If ncol(data) is large, you can use
+# recipe(data = nhl_train)
+```
+
+Based on the formula, the function assigns columns to roles of "outcome" or "predictor"
+
+
+```r
+summary(nhl_rec)
+#&gt; # A tibble: 22 × 4
+#&gt;   variable    type    role      source  
+#&gt;   &lt;chr&gt;       &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
+#&gt; 1 date_time   date    predictor original
+#&gt; 2 period      numeric predictor original
+#&gt; 3 period_type nominal predictor original
+#&gt; 4 coord_x     numeric predictor original
+#&gt; 5 coord_y     numeric predictor original
+#&gt; 6 game_time   numeric predictor original
+#&gt; # … with 16 more rows
+```
+
+
+---
+# A first recipe - work with dates &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+* step_date(date_time, features = c("dow", "month", "year"))
+```
+
+This creates three new columns in the data based on the date. Now that the day-of-the-week column is a factor.
+
+---
+# A first recipe - work with dates &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+* step_holiday(date_time)
+```
+
+Add indicators for major holidays. Specific holidays, especially those ex-US, can also be generated. 
+
+
+
+---
+# A first recipe - work with dates &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+* step_rm(date_time)
+```
+
+At this point, we don't need `date` anymore. We'll just delete it form the data but there are ways to change its role to an arbitrary value.  
+
+---
+# A first recipe -create indicator variables &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+* step_dummy(all_nominal_predictors())
+```
+
+For any factor or character predictors, make binary indicators. 
+
+There are _many_ recipe steps that can convert categorical predictors to numeric columns. 
+
+
+---
+# A first recipe - filter out constant columns &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+* step_zv(all_predictors())
+```
+
+In case there is a holiday that never was observed, we can delete any _zero-variance_ predictors that have a single unique value.
+
+Note that the selector chooses all columns with a role of "predictor"
+
+
+---
+# A first recipe - normalization &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+* step_normalize(all_numeric_predictors())
+```
+
+This centers and scales the numeric predictors. 
+
+Note that this will use the training set to estimate the means and standard deviations of the data. 
+
+All data put through the recipe will be normalized using those statistics (there is no re-estimation). 
+
+
+
+---
+# A first recipe - reduce correlation &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_normalize(all_numeric_predictors()) %&gt;% 
+* step_corr(all_numeric_predictors(), threshold = 0.9)
+```
+
+To deal with highly correlated predictors, find the minimum predictor set to remove to make the pairwise correlations are less than 0.9.
+
+There are other filter steps too, 
+
+---
+# Other possible steps &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_normalize(all_numeric_predictors()) %&gt;% 
+* step_pca(all_numeric_predictors())
+```
+
+PCA feature extraction...
+
+
+---
+# Other possible steps &lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/embed.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_normalize(all_numeric_predictors()) %&gt;% 
+* step_umap(all_numeric_predictors(), outcome = on_goal)
+```
+
+A fancy machine learning supervised dimension reduction technique
+
+
+---
+# Other possible steps &lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_normalize(all_numeric_predictors()) %&gt;% 
+* step_ns(angle, deg_free = 10)
+```
+
+Nonlinear transforms like _natural splines_ and so on. 
+
+---
+# What do we do with the player data? 
+
+There are 624 unique player values in our training set. 
+
+ * We _could_ make the full set of indicator variables...
+ * Or using [feature hashing](https://www.tmwr.org/categorical.html#feature-hashing) to make a subset.
+ 
+Instead, we will using effect encoding to replace the `player` column with the estimated effect of that predictor. 
+
+---
+# Per-player statistics
+
+.pull-left[
+
+&lt;img src="images/features-effects-1.svg" width="100%" style="display: block; margin: auto;" /&gt;&lt;img src="images/features-effects-2.svg" width="100%" style="display: block; margin: auto;" /&gt;
+
+]
+.pull-right[
+There are good statistical methods for estimating these rates that use _partial pooling_. 
+
+This borrows strength across players and shrinks extreme values (e.g. zero or one) towards the mean for players with very few shots. 
+
+The embed package has recipes steps for effect encodings. 
+
+]
+
+
+
+---
+# The last recipe  &lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/embed.svg" class="title-hex"&gt;
+
+
+```r
+library(embed)
+
+nhl_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+* step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
+```
+
+It is very important to appropriately validated the effect encoding step to make sure that we are not overfitting. 
+
+---
+# Recipes are estimated
+
+_Every_ preprocessing step in a recipe that involved calculations uses the _training set_. For example: 
+
+ * Levels of a factor
+ * Determination of zero-variance
+ * Normalization
+ * Feature extraction
+ * Effect encodings
+ 
+and so on. 
+
+Once a a recipe is added to a workflow, this occurs when `fit()` is called. 
+
+
+---
+# Recipes follow this strategy
+
+&lt;img src="images/the-model.svg" width="70%" style="display: block; margin: auto;" /&gt;
+
+---
+# Adding recipes to workflows &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+Let's stick to a linear model for now and add a recipe (instead of a formula):
+
+.code70[
+
+
+```r
+glm_spec &lt;- logistic_reg() 
+
+nhl_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
+  add_recipe(nhl_rec)
+
+nhl_wflow
+#&gt; ══ Workflow ═════════════════════════════════════════════════════════════════════════
+#&gt; Preprocessor: Recipe
+#&gt; Model: logistic_reg()
+#&gt; 
+#&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
+#&gt; 9 Recipe Steps
+#&gt; 
+#&gt; • step_date()
+#&gt; • step_holiday()
+#&gt; • step_rm()
+#&gt; • step_lencode_mixed()
+#&gt; • step_dummy()
+#&gt; • step_zv()
+#&gt; • step_ns()
+#&gt; • step_ns()
+#&gt; • step_normalize()
+#&gt; 
+#&gt; ── Model ────────────────────────────────────────────────────────────────────────────
+#&gt; Logistic Regression Model Specification (classification)
+#&gt; 
+#&gt; Computational engine: glm
+```
+
+]
+
+---
+# Estimate via `fit()` &lt;img src="images/workflows.svg" class="title-hex"&gt;
+
+Let's stick to a linear model for now and add a recipe (instead of a formula):
+
+.code70[
+
+
+```r
+nhl_fit &lt;- nhl_wflow %&gt;% fit(nhl_train)
+nhl_fit
+#&gt; ══ Workflow [trained] ═══════════════════════════════════════════════════════════════
+#&gt; Preprocessor: Recipe
+#&gt; Model: logistic_reg()
+#&gt; 
+#&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
+#&gt; 9 Recipe Steps
+#&gt; 
+#&gt; • step_date()
+#&gt; • step_holiday()
+#&gt; • step_rm()
+#&gt; • step_lencode_mixed()
+#&gt; • step_dummy()
+#&gt; • step_zv()
+#&gt; • step_ns()
+#&gt; • step_ns()
+#&gt; • step_normalize()
+#&gt; 
+#&gt; ── Model ────────────────────────────────────────────────────────────────────────────
+#&gt; 
+#&gt; Call:  stats::glm(formula = ..y ~ ., family = stats::binomial, data = data)
+#&gt; 
+#&gt; Coefficients:
+#&gt;                (Intercept)                      period                     coord_x  
+#&gt;                  -2.35e-01                    2.51e-02                    3.32e-02  
+#&gt;                    coord_y                   game_time                      player  
+#&gt;                  -1.72e-02                    6.99e-02                   -4.08e-01  
+#&gt;              offense_goals               defense_goals                 player_diff  
+#&gt;                  -8.81e-02                   -1.42e-01                    3.99e-02  
+#&gt;           behind_goal_line                        year              date_time_year  
+#&gt;                   3.67e-03                    1.09e-01                          NA  
+#&gt;         date_time_LaborDay       date_time_NewYearsDay         period_type_regular  
+#&gt;                   2.58e-02                   -4.87e-03                    6.98e-02  
+#&gt; strength_even_short_handed         strength_power_play       strength_short_handed  
+#&gt;                   1.05e-02                   -8.37e-02                          NA  
+#&gt;           offense_team_ARI            offense_team_BOS            offense_team_BUF  
+#&gt;                  -2.94e-02                    8.79e-03                    2.53e-02  
+#&gt;           offense_team_CAR            offense_team_CBJ            offense_team_CGY  
+#&gt;                   4.14e-02                    1.05e-02                    4.98e-02  
+#&gt;           offense_team_CHI            offense_team_COL            offense_team_DAL  
+#&gt;                  -2.81e-02                    3.32e-02                    4.44e-02  
+#&gt;           offense_team_DET            offense_team_EDM            offense_team_FLA  
+#&gt;                   4.13e-03                    4.79e-02                   -4.67e-02  
+#&gt;           offense_team_LAK            offense_team_MIN            offense_team_MTL  
+#&gt;                  -7.38e-03                    1.21e-02                   -3.95e-03  
+#&gt;           offense_team_NJD            offense_team_NSH            offense_team_NYI  
+#&gt;                  -1.29e-02                   -8.06e-03                   -1.30e-03  
+#&gt;           offense_team_NYR            offense_team_OTT            offense_team_PHI  
+#&gt;                   5.94e-02                    2.91e-02                    6.76e-02  
+#&gt;           offense_team_PIT            offense_team_SJS            offense_team_STL  
+#&gt;                   1.22e-01                    3.87e-02                    1.37e-02  
+#&gt;           offense_team_TBL            offense_team_TOR            offense_team_VAN  
+#&gt;                  -8.27e-03                    4.85e-02                   -1.45e-02  
+#&gt;           offense_team_WPG            offense_team_WSH            defence_team_ARI  
+#&gt;                   1.48e-02                    3.23e-02                   -1.62e-02  
+#&gt;           defence_team_BOS            defence_team_BUF            defence_team_CAR  
+#&gt;                  -6.58e-03                   -2.94e-02                   -4.34e-02  
+#&gt;           defence_team_CBJ            defence_team_CGY            defence_team_CHI  
+#&gt;                  -1.94e-02                   -1.60e-03                   -1.86e-02  
+#&gt;           defence_team_COL            defence_team_DAL            defence_team_DET  
+#&gt;                   2.31e-02                   -3.25e-02                   -2.85e-02  
+#&gt;           defence_team_EDM            defence_team_FLA            defence_team_LAK  
+#&gt;                  -2.49e-02                   -4.08e-02                   -7.94e-05  
+#&gt;           defence_team_MIN            defence_team_MTL            defence_team_NJD  
+#&gt;                  -2.25e-02                   -2.53e-02                   -4.28e-02  
+#&gt;           defence_team_NSH            defence_team_NYI            defence_team_NYR  
+#&gt;                  -4.46e-02                   -8.46e-02                   -4.50e-02  
+#&gt;           defence_team_OTT            defence_team_PHI            defence_team_PIT  
+#&gt;                  -1.67e-02                   -3.16e-02                          NA  
+#&gt; 
+#&gt; ...
+#&gt; and 44 more lines.
+```
+
+]
+
+---
+# Prediction &lt;img src="images/workflows.svg" class="title-hex"&gt;
+
+When `predict()` is called, the fitted recipe is applied to the new data before it is predicted by the model:
+
+
+```r
+predict(nhl_fit, nhl_test)
+#&gt; # A tibble: 3,037 × 1
+#&gt;   .pred_class
+#&gt;   &lt;fct&gt;      
+#&gt; 1 no         
+#&gt; 2 yes        
+#&gt; 3 yes        
+#&gt; 4 yes        
+#&gt; 5 no         
+#&gt; 6 yes        
+#&gt; # … with 3,031 more rows
+```
+
+You don't need to do anything else
+
+
+---
+# Tidying a recipe &lt;img src="images/broom.svg" class="title-hex"&gt;
+
+`tidy(recipe)` gives a summary of the steps:
+
+
+```r
+tidy(nhl_rec)
+#&gt; # A tibble: 9 × 6
+#&gt;   number operation type          trained skip  id                 
+#&gt;    &lt;int&gt; &lt;chr&gt;     &lt;chr&gt;         &lt;lgl&gt;   &lt;lgl&gt; &lt;chr&gt;              
+#&gt; 1      1 step      date          FALSE   FALSE date_YRzOZ         
+#&gt; 2      2 step      holiday       FALSE   FALSE holiday_uo6xg      
+#&gt; 3      3 step      rm            FALSE   FALSE rm_1Fv0a           
+#&gt; 4      4 step      lencode_mixed FALSE   FALSE lencode_mixed_968Ut
+#&gt; 5      5 step      dummy         FALSE   FALSE dummy_NSJch        
+#&gt; 6      6 step      zv            FALSE   FALSE zv_Ja5UA           
+#&gt; # … with 3 more rows
+```
+
+After fitting the recipe, you might want access to the statistics from each step. We can pull the fitted recipe from the workflow and choose which step to tidy by number or `id`
+
+---
+# Tidying a recipe &lt;img src="images/broom.svg" class="title-hex"&gt;
+
+
+
+```r
+nhl_fit %&gt;% 
+  extract_recipe() %&gt;% 
+  tidy(number = 4) # For per-player estimates
+#&gt; # A tibble: 625 × 4
+#&gt;   level            value terms  id                 
+#&gt;   &lt;chr&gt;            &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;              
+#&gt; 1 aaron_ekblad    0.242  player lencode_mixed_968Ut
+#&gt; 2 adam_clendening 0.134  player lencode_mixed_968Ut
+#&gt; 3 adam_cracknell  0.255  player lencode_mixed_968Ut
+#&gt; 4 adam_henrique   0.242  player lencode_mixed_968Ut
+#&gt; 5 adam_larsson    0.172  player lencode_mixed_968Ut
+#&gt; 6 adam_lowry      0.0894 player lencode_mixed_968Ut
+#&gt; # … with 619 more rows
+```
+
+---
+# Debugging a recipe
+
+90% of the time, you will want to use a workflow to estimate and apply a recipe. 
+
+If you have an error, the original recipe object (e.g. `nhl_rec`) can be estimated manually with a function called `bake()` (analogous to `fit()`). 
+
+This returns the fitted recipe. This can help debug any issues. 
+
+Another function (`bake()`) is analogous to `predict()` and gives you the processed data back. 
+
+
+---
+# Fun facts about recipes
+
+* Once `fit()` is called on a workflow, changing the model does not re-fit the recipe. 
+* A list of all known steps is [here](https://www.tidymodels.org/find/recipes/). 
+* Some steps can be [skipped](https://recipes.tidymodels.org/articles/Skipping.html) when using `predict()`. 
+* The [order](https://recipes.tidymodels.org/articles/Ordering.html) of the steps matters. 
+* There are &lt;span class="pkg"&gt;recipes&lt;/span&gt;-adjacent packages with more steps: &lt;span class="pkg"&gt;embed&lt;/span&gt;, &lt;span class="pkg"&gt;timetk&lt;/span&gt;, &lt;span class="pkg"&gt;textrecipes&lt;/span&gt;, and others. 
+  * If you do any text processing, &lt;span class="pkg"&gt;textrecipes&lt;/span&gt; is 🆒&lt;sup&gt;♾️&lt;/sup&gt;.
+    * Julia and Emil have written an amazing text processing book: [_Supervised Machine Learning for Text Analysis in R_](https://smltar.com/)
+* There are a lot of ways to handle [categorical predictors](https://recipes.tidymodels.org/articles/Dummies.html) even those with novel levels. 
+* Several &lt;span class="pkg"&gt;dplyr&lt;/span&gt; steps exist, such as `step_mutate()`. 
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc(%current% / %total% * 100%);\">\n  </div>\n</div>\n",
+"highlightStyle": "rainbow",
+"highlightLanguage": ["r", "css", "yaml"],
+"highlightLines": true,
+"highlightColor": null,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

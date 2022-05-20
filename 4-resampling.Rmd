@@ -1,0 +1,484 @@
+---
+title: "Using resampling to estimate performance"
+author: Max Kuhn
+event: New York R Conference
+url: https://github.com/topepo/2022-nyr-workshop
+output:
+  xaringan::moon_reader:
+    anchor_sections: FALSE
+    css: ["default", "css/theme.css", "css/fonts.css"]
+    seal: false 
+    lib_dir: libs
+    nature:
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+          </div>
+        </div>
+      highlightStyle: rainbow
+      highlightLanguage: ["r", "css", "yaml"]
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+
+```{r startup, include = FALSE}
+library(tidymodels)
+library(embed)
+library(doMC)
+
+registerDoMC(cores = 10)
+tidymodels_prefer()
+
+thm <- theme_bw() + 
+  theme(
+    panel.background = element_rect(fill = "transparent", colour = NA), 
+    plot.background = element_rect(fill = "transparent", colour = NA),
+    legend.position = "top",
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.key = element_rect(fill = "transparent", colour = NA)
+  )
+theme_set(thm)
+source("_common.R")
+
+knitr::opts_chunk$set(
+  comment = "#>",
+  collapse = TRUE,
+  digits = 3, 
+  fig.path = "images/resampling-",
+  fig.align = 'center',
+  fig.width = 10,
+  fig.height = 6,
+  out.width = "95%",
+  dev = 'svg',
+  dev.args = list(bg = "transparent"),
+  tidy = FALSE
+)
+```
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# `r rmarkdown::metadata$title`
+
+## `r rmarkdown::metadata$author`
+
+### `r rmarkdown::metadata$event`
+
+### Repo: `r slide_url`
+
+]
+
+
+```{r previously, include = FALSE}
+library(tidymodels)
+library(embed)
+library(ongoal)
+
+tidymodels_prefer()
+
+on_goal <- on_goal %>% filter(season == "20152016") %>% select(-season)
+
+nhl_split <- initial_split(on_goal, prop = 3/4)
+nhl_split
+
+nhl_train <- training(nhl_split)
+nhl_test  <- testing(nhl_split)
+```
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+
+---
+
+# Resampling methods
+
+.pull-left[
+These are additional data splitting schemes that are applied to the _training_ set and are used for **estimating model performance**. 
+
+They attempt to simulate slightly different versions of the training set. These versions of the original are split into two model subsets:
+
+* The _analysis set_ is used to fit the model (analogous to the training set). 
+* Performance is determined using the _assessment set_. 
+
+This process is repeated many times. 
+
+]
+
+.pull-right[
+
+```{r resample-schema, echo = FALSE, out.width = '120%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), warning=FALSE}
+knitr::include_graphics("images/resampling.svg")
+```
+
+]
+
+There are [different flavors of resampling](https://bookdown.org/max/FES/resampling.html) but we will focus on one method in these notes.
+
+---
+
+# The model workflow and resampling
+
+All resampling methods repeat this process multiple times: 
+
+
+```{r resample-simple, echo = FALSE, out.width = '65%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), warning=FALSE}
+knitr::include_graphics("images/diagram-resampling.svg")
+```
+
+
+The final resampling estimate is the average of all of the estimated metrics (e.g. RMSE, etc).
+
+---
+
+# V-Fold cross-validation
+
+.pull-left[
+
+Here, we randomly split the training data into _V_ distinct blocks of roughly equal size (AKA the "folds").
+
+* We leave out the first block of analysis data and fit a model.
+
+* This model is used to predict the held-out block of assessment data.
+
+* We continue this process until we've predicted all _V_ assessment blocks
+
+The final performance is based on the hold-out predictions by _averaging_ the statistics from the _V_ blocks. 
+
+]
+
+.pull-right[
+
+_V_ is usually taken to be 5 or 10 and leave-one-out cross-validation has each sample as a block. 
+
+**Repeated CV** can be used when training set sizes are small. 5 repeats of 10-fold CV averages for 50 sets of metrics.
+
+]
+
+---
+
+#  3-Fold cross-validation with _n_ = 30
+
+Randomly assign each sample to one of three folds
+
+```{r randomize-samples, echo = FALSE, out.width = '55%', fig.align='center'}
+knitr::include_graphics("images/three-CV.svg")
+```
+
+
+---
+
+#  3-Fold cross-validation with _n_ = 30
+
+```{r assign-folds, echo = FALSE, out.width = '65%', fig.align='center'}
+knitr::include_graphics("images/three-CV-iter.svg")
+```
+
+---
+
+# Resampling results
+
+The goal of resampling is to produce a single estimate of performance for a model. 
+
+Even though we end up estimating _V_ models (for _V_-fold CV), these models are discarded after we have our performance estimate. 
+
+Resampling is basically an empirical simulation system used to understand how well the model would work on _new data_ .
+
+---
+
+# Cross-validating using rsample `r I(hexes(c("rsample")))`
+
+rsample has a number of resampling functions built in. One is `vfold_cv()`, for performing V-Fold cross-validation like we've been discussing.
+
+```{r cv-ames}
+set.seed(2453)
+
+nhl_rs <- vfold_cv(nhl_train) #10-fold is default
+
+nhl_rs
+```
+
+???
+
+Note that `<split [2K/222]>` rounds to the thousandth and is the same as `<1977/222/2199>`
+
+---
+
+# Cross-validating Using rsample  `r I(hexes(c("rsample")))`
+
+- Each individual split object is similar to the `initial_split()` example.
+
+- Use `analysis()` to extract the resample's data used for the fitting process.
+
+- Use `assessment()` to extract the resample's data used for the performance process.
+
+.pull-left[
+
+```{r cv-ames-splits}
+nhl_rs$splits[[1]]
+```
+
+]
+
+.pull-right[
+
+```{r cv-ames-analysis}
+nhl_rs$splits[[1]] %>% 
+  analysis() %>%
+  dim()
+```
+
+```{r cv-ames-assessment}
+nhl_rs$splits[[1]] %>% 
+  assessment() %>%
+  dim()
+```
+
+]
+
+---
+# Our resampling object `r I(hexes(c("rsample")))`
+
+```{r}
+nhl_rs
+```
+
+We will fit `r nrow(nhl_rs)` models on  `r nrow(nhl_rs)` slightly different analysis sets. 
+
+Each will produce a separate ROC curves and we will average the  `r nrow(nhl_rs)` areas under those curves to get the resampling estimate of that statistic. 
+
+
+```{r, include = FALSE}
+glm_spec <- logistic_reg() # Use the default `glm` engine
+
+nhl_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_ns(angle, deg_free = 10) %>% 
+  step_ns(distance, deg_free = 10) %>% 
+  step_normalize(all_numeric_predictors()) 
+
+nhl_wflow <- 
+  workflow() %>% 
+  add_model(glm_spec) %>% 
+  add_recipe(nhl_rec)
+```
+
+---
+# Generating the resampling statistics `r I(hexes(c("rsample", "tune")))`
+
+Let's use the workflow from the last section (`nhl_wflow`). 
+
+In tidymodels, there is a function called `fit_resamples()` that will do all of this for us:
+
+```{r, warning = FALSE, message=FALSE}
+ctrl <- control_resamples(save_pred = TRUE)
+
+nhl_glm_splines <-
+  nhl_wflow %>% 
+  fit_resamples(resamples = nhl_rs, control = ctrl)
+nhl_glm_splines
+```
+
+
+---
+# Getting the results `r I(hexes(c("tune")))`
+
+To obtain the resampling estimates of performance: 
+
+```{r}
+collect_metrics(nhl_glm_splines)
+```
+
+To get the holdout predictions: 
+
+```{r}
+nhl_pred <- collect_predictions(nhl_glm_splines)
+nhl_pred %>% slice(1:4)
+```
+
+
+---
+# Plot performance  `r I(hexes(c("yardstick")))`
+
+A simple ggplot with a custom `coord_*` can be used. 
+
+.pull-left[
+
+```{r obs-vs-pred, fig.show = 'hide'}
+confusion <- 
+  nhl_pred %>% 
+  conf_mat(on_goal, .pred_class)
+
+autoplot(confusion)
+```
+
+We can also use the [`shinymodels`](https://github.com/tidymodels/shinymodels) package to get an interactive version of this plot:
+
+```{r eval = FALSE}
+library(shinymodels)
+explore(nhl_glm_splines, 
+        hover_cols = c(on_goal, position))
+```
+
+]
+.pull-right[
+
+```{r ref.label = 'obs-vs-pred', echo = FALSE, fig.width=5, fig.height=5,  out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
+```
+
+]
+
+---
+# Compute the _Average_ ROC Curve  `r I(hexes(c("tune", "yardstick", "dplyr")))`
+
+You can get the per-resample metrics and prediction using the `summarize = FALSE` option.
+
+An example function to add them to the results: 
+
+```{r}
+holdout_roc_curves <- function(x, prev = NULL) {
+  # Record the object name given when the function was called.
+  x_nm <- match.call()$x
+  x_nm <- gsub("nhl_", "", as.character(x_nm))
+
+  res <-
+    x %>%
+    # Get the predicted values for the model with the "best" performance
+    collect_predictions(parameters = select_best(x, metric = "roc_auc"),
+                        summarize = TRUE) %>%
+    # Compute the points on the ROC curve
+    roc_curve(truth = on_goal, .pred_yes) %>%
+    # Add the model name
+    mutate(Model = x_nm) %>%
+    arrange(1 - specificity, sensitivity)
+  # Append these to the top of any existing data
+  if (!is.null(prev)) {
+    res <- bind_rows(res, prev)
+  }
+  res
+}
+```
+
+
+---
+# Plot the _Average_ ROC Curve `r I(hexes(c("tune", "yardstick", "dplyr", "ggplot2")))`
+
+
+```{r}
+# Plot an _approximate_ ROC curve by pooling the holdout predictions
+holdout_roc_plots <- function(x) {
+  # Split the most recent model from the rest
+  new_nm <- x$Model[1]
+  new_res <- dplyr::filter(x, Model == new_nm)
+  prev_res <- dplyr::filter(x, Model != new_nm)
+
+  # Overlay the new and old curves
+  x %>%
+    ggplot(aes(x = 1 - specificity, y = sensitivity)) +
+    geom_abline(col = "red", lty = 3) +
+    geom_step(
+      data = prev_res,
+      aes(group = Model),
+      show.legend = FALSE,
+      col = "black",
+      alpha = 0.3
+    ) +
+    geom_step(data = new_res, col = "black") +
+    coord_obs_pred()
+}
+```
+
+
+---
+# Plotting the curve
+
+
+.pull-left-a-lot[
+```{r spline-results-code, eval = FALSE}
+nhl_roc_curves <- holdout_roc_curves(nhl_glm_splines)
+
+holdout_roc_plots(nhl_roc_curves)
+```
+
+]
+
+.pull-right-a-little[
+```{r spline-results, ref.label = 'spline-results-code', echo = FALSE, out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=4, fig.height=4}
+```
+]
+
+
+---
+# Is this better than no spline terms?  `r I(hexes(c("recipes", "workflows")))`
+
+
+```{r}
+nhl_lin_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_normalize(all_numeric_predictors()) 
+
+nhl_lin_wflow <- 
+  workflow() %>% 
+  add_model(glm_spec) %>% 
+  add_recipe(nhl_lin_rec)
+```
+
+
+---
+# Is this better than no spline terms?  `r I(hexes(c("tune")))`
+
+
+.pull-left-a-lot[
+```{r no-splines-fit, message = FALSE, warning=FALSE}
+nhl_lin_splines <-
+  nhl_lin_wflow %>% 
+  fit_resamples(resamples = nhl_rs, control = ctrl)
+
+collect_metrics(nhl_lin_splines)
+```
+
+```{r no-splines-code, eval = FALSE}
+nhl_roc_curves <- 
+  holdout_roc_curves(nhl_lin_splines, nhl_roc_curves)
+
+holdout_roc_plots(nhl_roc_curves)
+```
+
+]
+
+.pull-right-a-little[
+```{r no-splines, ref.label = 'no-splines-code', echo = FALSE, out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=4, fig.height=4}
+```
+]
+
+---
+# Some notes
+
+* These models fits are independent of one another. [Parallel processing](https://www.tmwr.org/resampling.html#parallel) can be used to significantly speed up the training process. 
+* The individual models can [be saved](https://www.tmwr.org/resampling.html#extract) so you can look at variation in the model parameters or recipes steps. 
+* If you are interested in a [validation set](https://www.tmwr.org/resampling.html#validation), tidymodels considers that a single resample of the data. Everything else in this chapter works the same. 

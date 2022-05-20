@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Introduction to tidymodels</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Max Kuhn" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/countdown-0.3.5/countdown.css" rel="stylesheet" />
+    <script src="libs/countdown-0.3.5/countdown.js"></script>
+    <link rel="stylesheet" href="css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# Introduction to tidymodels
+
+## Max Kuhn
+
+### New York R Conference
+
+### Repo: [https://github.com/topepo/2022-nyr-workshop](https://github.com/topepo/https://github.com/topepo/2022-nyr-workshop)
+
+]
+
+
+---
+# Our goals for this workshop
+
+* Introduce tidymodels and its general philosophy on modeling. 
+
+* Help you become proficient with the core packages for modeling. 
+
+* Point you to places to learn more and get help. 
+
+---
+# Why tidymodels?
+
+There are several other modeling frameworks in R that try to:
+
+ * create a uniform, cohesive, and unsurprising set of modeling APIs
+ 
+Examples are &lt;span class="pkg"&gt;caret&lt;/span&gt;, &lt;span class="pkg"&gt;mlr3&lt;/span&gt;, and others. 
+
+* &lt;span class="pkg"&gt;caret&lt;/span&gt; is more favorable for people who prefer base R/traditional interfaces.
+
+* tidymodels would probably be preferable to those who place importance on a tidy _R_ interface, a large number of features, and the idea that the interfaces should enable the "pit of success". 
+
+* &lt;span class="pkg"&gt;mlr3&lt;/span&gt; is more pythonic and also has many features.
+
+---
+# The tidymodels package
+
+There are a lot of tidymodels packages but about 90% of the work is done by 5 packages. 
+
+The best way to get started with tidymodels is to use the &lt;span class="pkg"&gt;tidymodels&lt;/span&gt; meta-package. It loads the core packages plus some tidyverse packages.
+
+Some helpful links:
+
+ * List of [all tidymodels functions](https://www.tidymodels.org/find/#search-all-of-tidymodels)
+ * List of [all parsnip models](https://www.tidymodels.org/find/parsnip/)
+ * List of [all recipe steps](https://www.tidymodels.org/find/recipes/)
+
+
+---
+# The tidymodels package &lt;img src="images/tidyverse.svg" class="title-hex"&gt;&lt;img src="images/tidymodels.svg" class="title-hex"&gt;
+
+
+```r
+library(tidymodels)
+#&gt; ── Attaching packages ─────────────────────────────────────────── tidymodels 0.2.0 ──
+#&gt; ✔ broom        0.8.0     ✔ recipes      0.2.0
+#&gt; ✔ dials        0.1.1     ✔ rsample      0.1.1
+#&gt; ✔ dplyr        1.0.9     ✔ tibble       3.1.7
+#&gt; ✔ ggplot2      3.3.6     ✔ tidyr        1.2.0
+#&gt; ✔ infer        1.0.0     ✔ tune         0.2.0
+#&gt; ✔ modeldata    0.1.1     ✔ workflows    0.2.6
+#&gt; ✔ parsnip      0.2.1     ✔ workflowsets 0.2.1
+#&gt; ✔ purrr        0.3.4     ✔ yardstick    0.0.9
+#&gt; ── Conflicts ────────────────────────────────────────────── tidymodels_conflicts() ──
+#&gt; ✖ purrr::discard() masks scales::discard()
+#&gt; ✖ dplyr::filter()  masks stats::filter()
+#&gt; ✖ dplyr::lag()     masks stats::lag()
+#&gt; ✖ recipes::step()  masks stats::step()
+#&gt; • Search for functions across packages at https://www.tidymodels.org/find/
+```
+
+---
+# Managing name conflicts
+
+```r
+tidymodels_prefer(quiet = FALSE)
+```
+
+```
+## [conflicted] Will prefer dplyr::filter over any other package
+## [conflicted] Will prefer dplyr::select over any other package
+## [conflicted] Will prefer dplyr::slice over any other package
+## [conflicted] Will prefer dplyr::rename over any other package
+## [conflicted] Will prefer dials::neighbors over any other package
+## [conflicted] Will prefer plsmod::pls over any other package
+## [conflicted] Will prefer purrr::map over any other package
+## [conflicted] Will prefer recipes::step over any other package
+## [conflicted] Will prefer themis::step_downsample over any other package
+## [conflicted] Will prefer themis::step_upsample over any other package
+## [conflicted] Will prefer tune::tune over any other package
+## [conflicted] Will prefer yardstick::precision over any other package
+## [conflicted] Will prefer yardstick::recall over any other package
+```
+
+
+---
+# Base R and tidyverse differences
+
+.pull-left[
+Base R/&lt;span class="pkg"&gt;caret&lt;/span&gt;
+
+```r
+mtcars &lt;- mtcars[order(mtcars$cyl),]
+mtcars &lt;- mtcars[, "mpg", drop = FALSE]
+
+
+# ──────────────────────────────────────────────
+
+mtcars$mp        # matches incomplete arg
+mtcars[, "mpg"]  # a vector
+
+
+# ──────────────────────────────────────────────
+
+num_args &lt;- function(x) length(formals(x))
+
+
+num_args(caret::trainControl) + 
+  num_args(caret:::train.default)
+
+```
+
+```
+## 38
+```
+]
+.pull-right[
+tidyverse/tidymodels
+
+```r
+mtcars %&gt;% 
+  arrange(cyl) %&gt;% 
+  select(mpg)
+
+# ──────────────────────────────────────────────
+
+tb_cars &lt;- as_tibble(mtcars)
+tb_cars$mp        # fails
+tb_cars[, "mpg"]  # A tibble 
+
+# ──────────────────────────────────────────────
+
+
+
+num_args(linear_reg) + num_args(set_engine) + 
+  num_args(tune_grid) + num_args(control_grid) + 
+  num_args(vfold_cv)
+
+```
+```
+## 23
+```
+]
+
+
+---
+# Example data set
+
+We'll use some sports data to demonstrate classification models. 
+
+The data are in the ongoal package at [`topepo/ongoal`](https://github.com/topepo/ongoal).
+
+The outcome is a factor of whether a shot was on-goal or not. Predictors:
+
+* Game related: type of game, power-play data, etc.
+* Player: who, position, team
+* Shot: where, when
+
+We'll use data from the 2015-2016 season. 
+
+---
+
+# Data ~~Slapshot~~ Snapshot
+
+
+```r
+library(ongoal)
+# source("_common.R")
+set.seed(1)
+on_goal %&gt;%
+  filter(season == "20152016") %&gt;% 
+  sample_n(500) %&gt;% 
+  plot_rink(alpha = 3/4, cex = 2)
+```
+
+&lt;img src="images/introduction-rink-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+.footnote[ggplot rink code by `mrbilltran`]
+
+---
+
+# Medium distance shots by player position
+
+
+```r
+# Change the grouping variable
+set.seed(1)
+on_goal %&gt;%
+  filter(season == "20152016" &amp; distance &gt; 32) %&gt;% 
+  sample_n(500) %&gt;% 
+  plot_rink(position, alpha = 3/4, cex = 2)
+```
+
+&lt;img src="images/introduction-position-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+# Hands-On: Explore the Data
+
+Take a look at these data for a few minutes and see if you can find any interesting characteristics in the predictors or the outcome.  
+
+<div class="countdown" id="timer_6287b975" style="bottom:0;left:1;" data-warnwhen="0">
+<code class="countdown-time"><span class="countdown-digits minutes">10</span><span class="countdown-digits colon">:</span><span class="countdown-digits seconds">00</span></code>
+</div>
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc(%current% / %total% * 100%);\">\n  </div>\n</div>\n",
+"highlightStyle": "rainbow",
+"highlightLanguage": ["r", "css", "yaml"],
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

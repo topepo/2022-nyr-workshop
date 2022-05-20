@@ -1,0 +1,260 @@
+---
+title: "Introduction to tidymodels"
+author: Max Kuhn
+event: New York R Conference
+url: https://github.com/topepo/2022-nyr-workshop
+output:
+  xaringan::moon_reader:
+    anchor_sections: FALSE
+    css: ["default", "css/theme.css", "css/fonts.css"]
+    seal: false 
+    lib_dir: libs
+    nature:
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+          </div>
+        </div>
+      highlightStyle: rainbow
+      highlightLanguage: ["r", "css", "yaml"]
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+```{r include = FALSE}
+# devtools::install_github("gadenbuie/countdown")
+library(countdown)
+library(leaflet)
+library(knitr)
+library(ongoal)
+
+knitr::opts_chunk$set(
+  comment = "#>",
+  collapse = TRUE,
+  digits = 3, 
+  fig.path = "images/introduction-",
+  fig.align = 'center',
+  fig.width = 10,
+  fig.height = 6,
+  out.width = "95%",
+  dev = 'svg',
+  dev.args = list(bg = "transparent"),
+  tidy = FALSE
+)
+
+opts_chunk$set()
+source("_common.R")
+```
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# `r rmarkdown::metadata$title`
+
+## `r rmarkdown::metadata$author`
+
+### `r rmarkdown::metadata$event`
+
+### Repo: `r slide_url`
+
+]
+
+
+---
+# Our goals for this workshop
+
+* Introduce tidymodels and its general philosophy on modeling. 
+
+* Help you become proficient with the core packages for modeling. 
+
+* Point you to places to learn more and get help. 
+
+---
+# Why tidymodels?
+
+There are several other modeling frameworks in R that try to:
+
+ * create a uniform, cohesive, and unsurprising set of modeling APIs
+ 
+Examples are `r pkg(caret)`, `r pkg(mlr3)`, and others. 
+
+* `r pkg(caret)` is more favorable for people who prefer base R/traditional interfaces.
+
+* tidymodels would probably be preferable to those who place importance on a tidy _R_ interface, a large number of features, and the idea that the interfaces should enable the "pit of success". 
+
+* `r pkg(mlr3)` is more pythonic and also has many features.
+
+---
+# The tidymodels package
+
+There are a lot of tidymodels packages but about 90% of the work is done by 5 packages. 
+
+The best way to get started with tidymodels is to use the `r pkg(tidymodels)` meta-package. It loads the core packages plus some tidyverse packages.
+
+Some helpful links:
+
+ * List of [all tidymodels functions](https://www.tidymodels.org/find/#search-all-of-tidymodels)
+ * List of [all parsnip models](https://www.tidymodels.org/find/parsnip/)
+ * List of [all recipe steps](https://www.tidymodels.org/find/recipes/)
+
+
+---
+# The tidymodels package `r I(hexes(c("tidymodels", "tidyverse")))`
+
+```{r}
+library(tidymodels)
+```
+
+---
+# Managing name conflicts
+
+```r
+tidymodels_prefer(quiet = FALSE)
+```
+
+```
+## [conflicted] Will prefer dplyr::filter over any other package
+## [conflicted] Will prefer dplyr::select over any other package
+## [conflicted] Will prefer dplyr::slice over any other package
+## [conflicted] Will prefer dplyr::rename over any other package
+## [conflicted] Will prefer dials::neighbors over any other package
+## [conflicted] Will prefer plsmod::pls over any other package
+## [conflicted] Will prefer purrr::map over any other package
+## [conflicted] Will prefer recipes::step over any other package
+## [conflicted] Will prefer themis::step_downsample over any other package
+## [conflicted] Will prefer themis::step_upsample over any other package
+## [conflicted] Will prefer tune::tune over any other package
+## [conflicted] Will prefer yardstick::precision over any other package
+## [conflicted] Will prefer yardstick::recall over any other package
+```
+
+
+---
+# Base R and tidyverse differences
+
+.pull-left[
+Base R/`r pkg(caret)`
+```{r, eval = FALSE}
+mtcars <- mtcars[order(mtcars$cyl),]
+mtcars <- mtcars[, "mpg", drop = FALSE]
+
+
+# ──────────────────────────────────────────────
+
+mtcars$mp        # matches incomplete arg
+mtcars[, "mpg"]  # a vector
+
+
+# ──────────────────────────────────────────────
+
+num_args <- function(x) length(formals(x))
+
+
+num_args(caret::trainControl) + 
+  num_args(caret:::train.default)
+
+```
+
+```
+## 38
+```
+]
+.pull-right[
+tidyverse/tidymodels
+```{r, eval = FALSE}
+mtcars %>% 
+  arrange(cyl) %>% 
+  select(mpg)
+
+# ──────────────────────────────────────────────
+
+tb_cars <- as_tibble(mtcars)
+tb_cars$mp        # fails
+tb_cars[, "mpg"]  # A tibble 
+
+# ──────────────────────────────────────────────
+
+
+
+num_args(linear_reg) + num_args(set_engine) + 
+  num_args(tune_grid) + num_args(control_grid) + 
+  num_args(vfold_cv)
+
+```
+```
+## 23
+```
+]
+
+
+---
+# Example data set
+
+We'll use some sports data to demonstrate classification models. 
+
+The data are in the ongoal package at [`topepo/ongoal`](https://github.com/topepo/ongoal).
+
+The outcome is a factor of whether a shot was on-goal or not. Predictors:
+
+* Game related: type of game, power-play data, etc.
+* Player: who, position, team
+* Shot: where, when
+
+We'll use data from the 2015-2016 season. 
+
+---
+
+# Data ~~Slapshot~~ Snapshot
+
+```{r rink, fig.width=7, fig.height=3, out.width = "80%"}
+library(ongoal)
+# source("_common.R")
+set.seed(1)
+on_goal %>%
+  filter(season == "20152016") %>% 
+  sample_n(500) %>% 
+  plot_rink(alpha = 3/4, cex = 2)
+```
+
+.footnote[ggplot rink code by `mrbilltran`]
+
+---
+
+# Medium distance shots by player position
+
+```{r position, fig.width=7, fig.height=3, out.width = "80%"}
+# Change the grouping variable
+set.seed(1)
+on_goal %>%
+  filter(season == "20152016" & distance > 32) %>% 
+  sample_n(500) %>% 
+  plot_rink(position, alpha = 3/4, cex = 2)
+```
+
+
+---
+
+# Hands-On: Explore the Data
+
+Take a look at these data for a few minutes and see if you can find any interesting characteristics in the predictors or the outcome.  
+
+`r countdown(minutes = 10, left = 1)`
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+
+
+

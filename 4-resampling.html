@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Using resampling to estimate performance</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Max Kuhn" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# Using resampling to estimate performance
+
+## Max Kuhn
+
+### New York R Conference
+
+### Repo: [https://github.com/topepo/2022-nyr-workshop](https://github.com/topepo/https://github.com/topepo/2022-nyr-workshop)
+
+]
+
+
+
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+
+---
+
+# Resampling methods
+
+.pull-left[
+These are additional data splitting schemes that are applied to the _training_ set and are used for **estimating model performance**. 
+
+They attempt to simulate slightly different versions of the training set. These versions of the original are split into two model subsets:
+
+* The _analysis set_ is used to fit the model (analogous to the training set). 
+* Performance is determined using the _assessment set_. 
+
+This process is repeated many times. 
+
+]
+
+.pull-right[
+
+&lt;img src="images/resampling.svg" width="120%" style="display: block; margin: auto;" /&gt;
+
+]
+
+There are [different flavors of resampling](https://bookdown.org/max/FES/resampling.html) but we will focus on one method in these notes.
+
+---
+
+# The model workflow and resampling
+
+All resampling methods repeat this process multiple times: 
+
+
+&lt;img src="images/diagram-resampling.svg" width="65%" style="display: block; margin: auto;" /&gt;
+
+
+The final resampling estimate is the average of all of the estimated metrics (e.g. RMSE, etc).
+
+---
+
+# V-Fold cross-validation
+
+.pull-left[
+
+Here, we randomly split the training data into _V_ distinct blocks of roughly equal size (AKA the "folds").
+
+* We leave out the first block of analysis data and fit a model.
+
+* This model is used to predict the held-out block of assessment data.
+
+* We continue this process until we've predicted all _V_ assessment blocks
+
+The final performance is based on the hold-out predictions by _averaging_ the statistics from the _V_ blocks. 
+
+]
+
+.pull-right[
+
+_V_ is usually taken to be 5 or 10 and leave-one-out cross-validation has each sample as a block. 
+
+**Repeated CV** can be used when training set sizes are small. 5 repeats of 10-fold CV averages for 50 sets of metrics.
+
+]
+
+---
+
+#  3-Fold cross-validation with _n_ = 30
+
+Randomly assign each sample to one of three folds
+
+&lt;img src="images/three-CV.svg" width="55%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+#  3-Fold cross-validation with _n_ = 30
+
+&lt;img src="images/three-CV-iter.svg" width="65%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Resampling results
+
+The goal of resampling is to produce a single estimate of performance for a model. 
+
+Even though we end up estimating _V_ models (for _V_-fold CV), these models are discarded after we have our performance estimate. 
+
+Resampling is basically an empirical simulation system used to understand how well the model would work on _new data_ .
+
+---
+
+# Cross-validating using rsample &lt;img src="images/rsample.svg" class="title-hex"&gt;
+
+rsample has a number of resampling functions built in. One is `vfold_cv()`, for performing V-Fold cross-validation like we've been discussing.
+
+
+```r
+set.seed(2453)
+
+nhl_rs &lt;- vfold_cv(nhl_train) #10-fold is default
+
+nhl_rs
+#&gt; #  10-fold cross-validation 
+#&gt; # A tibble: 10 × 2
+#&gt;   splits             id    
+#&gt;   &lt;list&gt;             &lt;chr&gt; 
+#&gt; 1 &lt;split [8199/911]&gt; Fold01
+#&gt; 2 &lt;split [8199/911]&gt; Fold02
+#&gt; 3 &lt;split [8199/911]&gt; Fold03
+#&gt; 4 &lt;split [8199/911]&gt; Fold04
+#&gt; 5 &lt;split [8199/911]&gt; Fold05
+#&gt; 6 &lt;split [8199/911]&gt; Fold06
+#&gt; # … with 4 more rows
+```
+
+???
+
+Note that `&lt;split [2K/222]&gt;` rounds to the thousandth and is the same as `&lt;1977/222/2199&gt;`
+
+---
+
+# Cross-validating Using rsample  &lt;img src="images/rsample.svg" class="title-hex"&gt;
+
+- Each individual split object is similar to the `initial_split()` example.
+
+- Use `analysis()` to extract the resample's data used for the fitting process.
+
+- Use `assessment()` to extract the resample's data used for the performance process.
+
+.pull-left[
+
+
+```r
+nhl_rs$splits[[1]]
+#&gt; &lt;Analysis/Assess/Total&gt;
+#&gt; &lt;8199/911/9110&gt;
+```
+
+]
+
+.pull-right[
+
+
+```r
+nhl_rs$splits[[1]] %&gt;% 
+  analysis() %&gt;%
+  dim()
+#&gt; [1] 8199   22
+```
+
+
+```r
+nhl_rs$splits[[1]] %&gt;% 
+  assessment() %&gt;%
+  dim()
+#&gt; [1] 911  22
+```
+
+]
+
+---
+# Our resampling object &lt;img src="images/rsample.svg" class="title-hex"&gt;
+
+
+```r
+nhl_rs
+#&gt; #  10-fold cross-validation 
+#&gt; # A tibble: 10 × 2
+#&gt;   splits             id    
+#&gt;   &lt;list&gt;             &lt;chr&gt; 
+#&gt; 1 &lt;split [8199/911]&gt; Fold01
+#&gt; 2 &lt;split [8199/911]&gt; Fold02
+#&gt; 3 &lt;split [8199/911]&gt; Fold03
+#&gt; 4 &lt;split [8199/911]&gt; Fold04
+#&gt; 5 &lt;split [8199/911]&gt; Fold05
+#&gt; 6 &lt;split [8199/911]&gt; Fold06
+#&gt; # … with 4 more rows
+```
+
+We will fit 10 models on  10 slightly different analysis sets. 
+
+Each will produce a separate ROC curves and we will average the  10 areas under those curves to get the resampling estimate of that statistic. 
+
+
+
+
+---
+# Generating the resampling statistics &lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/rsample.svg" class="title-hex"&gt;
+
+Let's use the workflow from the last section (`nhl_wflow`). 
+
+In tidymodels, there is a function called `fit_resamples()` that will do all of this for us:
+
+
+```r
+ctrl &lt;- control_resamples(save_pred = TRUE)
+
+nhl_glm_splines &lt;-
+  nhl_wflow %&gt;% 
+  fit_resamples(resamples = nhl_rs, control = ctrl)
+nhl_glm_splines
+#&gt; # Resampling results
+#&gt; # 10-fold cross-validation 
+#&gt; # A tibble: 10 × 5
+#&gt;   splits             id     .metrics         .notes           .predictions      
+#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;           &lt;list&gt;           &lt;list&gt;            
+#&gt; 1 &lt;split [8199/911]&gt; Fold01 &lt;tibble [2 × 4]&gt; &lt;tibble [1 × 3]&gt; &lt;tibble [911 × 6]&gt;
+#&gt; 2 &lt;split [8199/911]&gt; Fold02 &lt;tibble [2 × 4]&gt; &lt;tibble [1 × 3]&gt; &lt;tibble [911 × 6]&gt;
+#&gt; 3 &lt;split [8199/911]&gt; Fold03 &lt;tibble [2 × 4]&gt; &lt;tibble [1 × 3]&gt; &lt;tibble [911 × 6]&gt;
+#&gt; 4 &lt;split [8199/911]&gt; Fold04 &lt;tibble [2 × 4]&gt; &lt;tibble [1 × 3]&gt; &lt;tibble [911 × 6]&gt;
+#&gt; 5 &lt;split [8199/911]&gt; Fold05 &lt;tibble [2 × 4]&gt; &lt;tibble [1 × 3]&gt; &lt;tibble [911 × 6]&gt;
+#&gt; 6 &lt;split [8199/911]&gt; Fold06 &lt;tibble [2 × 4]&gt; &lt;tibble [1 × 3]&gt; &lt;tibble [911 × 6]&gt;
+#&gt; # … with 4 more rows
+#&gt; 
+#&gt; There were issues with some computations:
+#&gt; 
+#&gt;   - Warning(s) x10: prediction from a rank-deficient fit may be misleading
+#&gt; 
+#&gt; Use `collect_notes(object)` for more information.
+```
+
+
+---
+# Getting the results &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+To obtain the resampling estimates of performance: 
+
+
+```r
+collect_metrics(nhl_glm_splines)
+#&gt; # A tibble: 2 × 6
+#&gt;   .metric  .estimator  mean     n std_err .config             
+#&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;               
+#&gt; 1 accuracy binary     0.616    10 0.00458 Preprocessor1_Model1
+#&gt; 2 roc_auc  binary     0.652    10 0.00440 Preprocessor1_Model1
+```
+
+To get the holdout predictions: 
+
+
+```r
+nhl_pred &lt;- collect_predictions(nhl_glm_splines)
+nhl_pred %&gt;% slice(1:4)
+#&gt; # A tibble: 4 × 7
+#&gt;   id     .pred_yes .pred_no  .row .pred_class on_goal .config             
+#&gt;   &lt;chr&gt;      &lt;dbl&gt;    &lt;dbl&gt; &lt;int&gt; &lt;fct&gt;       &lt;fct&gt;   &lt;chr&gt;               
+#&gt; 1 Fold01     0.652    0.348    14 yes         yes     Preprocessor1_Model1
+#&gt; 2 Fold01     0.838    0.162    45 yes         yes     Preprocessor1_Model1
+#&gt; 3 Fold01     0.803    0.197    50 yes         yes     Preprocessor1_Model1
+#&gt; 4 Fold01     0.756    0.244    96 yes         yes     Preprocessor1_Model1
+```
+
+
+---
+# Plot performance  &lt;img src="images/yardstick.svg" class="title-hex"&gt;
+
+A simple ggplot with a custom `coord_*` can be used. 
+
+.pull-left[
+
+
+```r
+confusion &lt;- 
+  nhl_pred %&gt;% 
+  conf_mat(on_goal, .pred_class)
+
+autoplot(confusion)
+```
+
+We can also use the [`shinymodels`](https://github.com/tidymodels/shinymodels) package to get an interactive version of this plot:
+
+
+```r
+library(shinymodels)
+explore(nhl_glm_splines, 
+        hover_cols = c(on_goal, position))
+```
+
+]
+.pull-right[
+
+&lt;img src="images/resampling-unnamed-chunk-7-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
+]
+
+---
+# Compute the _Average_ ROC Curve  &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/dplyr.png" class="title-hex"&gt;
+
+You can get the per-resample metrics and prediction using the `summarize = FALSE` option.
+
+An example function to add them to the results: 
+
+
+```r
+holdout_roc_curves &lt;- function(x, prev = NULL) {
+  # Record the object name given when the function was called.
+  x_nm &lt;- match.call()$x
+  x_nm &lt;- gsub("nhl_", "", as.character(x_nm))
+
+  res &lt;-
+    x %&gt;%
+    # Get the predicted values for the model with the "best" performance
+    collect_predictions(parameters = select_best(x, metric = "roc_auc"),
+                        summarize = TRUE) %&gt;%
+    # Compute the points on the ROC curve
+    roc_curve(truth = on_goal, .pred_yes) %&gt;%
+    # Add the model name
+    mutate(Model = x_nm) %&gt;%
+    arrange(1 - specificity, sensitivity)
+  # Append these to the top of any existing data
+  if (!is.null(prev)) {
+    res &lt;- bind_rows(res, prev)
+  }
+  res
+}
+```
+
+
+---
+# Plot the _Average_ ROC Curve &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/ggplot2.svg" class="title-hex"&gt;&lt;img src="images/dplyr.png" class="title-hex"&gt;
+
+
+
+```r
+# Plot an _approximate_ ROC curve by pooling the holdout predictions
+holdout_roc_plots &lt;- function(x) {
+  # Split the most recent model from the rest
+  new_nm &lt;- x$Model[1]
+  new_res &lt;- dplyr::filter(x, Model == new_nm)
+  prev_res &lt;- dplyr::filter(x, Model != new_nm)
+
+  # Overlay the new and old curves
+  x %&gt;%
+    ggplot(aes(x = 1 - specificity, y = sensitivity)) +
+    geom_abline(col = "red", lty = 3) +
+    geom_step(
+      data = prev_res,
+      aes(group = Model),
+      show.legend = FALSE,
+      col = "black",
+      alpha = 0.3
+    ) +
+    geom_step(data = new_res, col = "black") +
+    coord_obs_pred()
+}
+```
+
+
+---
+# Plotting the curve
+
+
+.pull-left-a-lot[
+
+```r
+nhl_roc_curves &lt;- holdout_roc_curves(nhl_glm_splines)
+
+holdout_roc_plots(nhl_roc_curves)
+```
+
+]
+
+.pull-right-a-little[
+&lt;img src="images/resampling-spline-results-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+# Is this better than no spline terms?  &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;
+
+
+
+```r
+nhl_lin_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
+
+nhl_lin_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
+  add_recipe(nhl_lin_rec)
+```
+
+
+---
+# Is this better than no spline terms?  &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+.pull-left-a-lot[
+
+```r
+nhl_lin_splines &lt;-
+  nhl_lin_wflow %&gt;% 
+  fit_resamples(resamples = nhl_rs, control = ctrl)
+
+collect_metrics(nhl_lin_splines)
+#&gt; # A tibble: 2 × 6
+#&gt;   .metric  .estimator  mean     n std_err .config             
+#&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;               
+#&gt; 1 accuracy binary     0.579    10 0.00486 Preprocessor1_Model1
+#&gt; 2 roc_auc  binary     0.593    10 0.00484 Preprocessor1_Model1
+```
+
+
+```r
+nhl_roc_curves &lt;- 
+  holdout_roc_curves(nhl_lin_splines, nhl_roc_curves)
+
+holdout_roc_plots(nhl_roc_curves)
+```
+
+]
+
+.pull-right-a-little[
+&lt;img src="images/resampling-no-splines-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+# Some notes
+
+* These models fits are independent of one another. [Parallel processing](https://www.tmwr.org/resampling.html#parallel) can be used to significantly speed up the training process. 
+* The individual models can [be saved](https://www.tmwr.org/resampling.html#extract) so you can look at variation in the model parameters or recipes steps. 
+* If you are interested in a [validation set](https://www.tmwr.org/resampling.html#validation), tidymodels considers that a single resample of the data. Everything else in this chapter works the same. 
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc(%current% / %total% * 100%);\">\n  </div>\n</div>\n",
+"highlightStyle": "rainbow",
+"highlightLanguage": ["r", "css", "yaml"],
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

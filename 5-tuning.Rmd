@@ -1,0 +1,732 @@
+---
+title: "Model Tuning"
+author: Max Kuhn
+event: New York R Conference
+url: https://github.com/topepo/2022-nyr-workshop
+output:
+  xaringan::moon_reader:
+    anchor_sections: FALSE
+    css: ["default", "css/theme.css", "css/fonts.css"]
+    seal: false 
+    lib_dir: libs
+    nature:
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+          </div>
+        </div>
+      highlightStyle: rainbow
+      highlightLanguage: ["r", "css", "yaml"]
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+
+
+```{r startup, include = FALSE}
+library(tidymodels)
+library(embed)
+library(doMC)
+library(patchwork)
+library(rpart)
+library(partykit)
+library(grid)
+
+registerDoMC(cores = 10)
+tidymodels_prefer()
+
+thm <- theme_bw() + 
+  theme(
+    panel.background = element_rect(fill = "transparent", colour = NA), 
+    plot.background = element_rect(fill = "transparent", colour = NA),
+    legend.position = "top",
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.key = element_rect(fill = "transparent", colour = NA)
+  )
+theme_set(thm)
+source("_common.R")
+
+knitr::opts_chunk$set(
+  comment = "#>",
+  collapse = TRUE,
+  digits = 3, 
+  fig.path = "images/tuning-",
+  fig.align = 'center',
+  fig.width = 10,
+  fig.height = 6,
+  out.width = "95%",
+  dev = 'svg',
+  dev.args = list(bg = "transparent"),
+  tidy = FALSE
+)
+```
+
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# `r rmarkdown::metadata$title`
+
+## `r rmarkdown::metadata$author`
+
+### `r rmarkdown::metadata$event`
+
+### Repo: `r slide_url`
+
+]
+
+
+
+```{r previously, include = FALSE}
+library(tidymodels)
+library(embed)
+library(ongoal)
+
+tidymodels_prefer()
+
+on_goal <- on_goal %>% filter(season == "20152016") %>% select(-season)
+
+nhl_split <- initial_split(on_goal, prop = 3/4)
+nhl_split
+
+nhl_train <- training(nhl_split)
+nhl_test  <- testing(nhl_split)
+
+set.seed(2453)
+nhl_rs <- vfold_cv(nhl_train) #10-fold is default
+```
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+
+---
+# Tuning parameters
+
+These are model or preprocessing parameters that are important but cannot be estimated directly form the data. 
+
+Some examples:
+
+.pull-left[
+
+* Tree depth in decision trees.
+
+* Number of neighbors in a K-nearest neighbor model. 
+
+* Activation function (e.g. sigmoidal, ReLu) in neural networks. 
+
+* Number of PCA components to retain
+
+]
+.pull-right[
+
+* Covariance/correlation matrix structure in mixed models.
+
+* Data distribution in survival models.
+
+* Spline degrees of freedom. 
+]
+
+---
+# Optimizing tuning parameters
+
+The main approach is to try different values and measure their performance. This can lead us to good values for these parameters. 
+
+The main two classes of optimization models are: 
+
+ * _Grid search_ where a pre-defined set of candidate values are tested. 
+ 
+ * _Iterative search_ methods suggest/estimate new values of candidate parameters to evaluate. 
+
+Once the value(s) of the parameter(s) are determine, a model can be finalized but fitting the model to the entire training set. 
+
+
+---
+# Measuring the effect of tuning parameters
+
+We need performance metrics to tell us which candidate values are good and which are not. 
+
+Using the test set, or simply re-predicting the training set, are very bad ideas. 
+
+Since tuning parameters often control complexity, they can often lead to [_overfitting_](https://www.tmwr.org/tuning.html#overfitting-bad). 
+
+* This is where the model does very well on the training set but poorly on new data. 
+
+Using _resampling_ to estimate performance can help identify parameters that lead to overfitting. 
+
+The cost is computational time. 
+
+---
+# Overfitting with machine learning
+
+```{r overfitting, echo = FALSE, out.width = '60%', fig.width=9, fig.height=3.75, fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
+data(parabolic)
+
+set.seed(15)
+split <- initial_split(parabolic, strata = "class", prop = 1/2)
+
+training_set <- training(split)
+testing_set  <-  testing(split)
+
+data_grid <-
+  crossing(X1 = seq(-6, 5, length = 200),
+           X2 = seq(-6, 5, length = 200))
+
+
+two_class_rec <-
+  recipe(class ~ ., data = parabolic) %>%
+  step_normalize(all_numeric_predictors())
+
+svm_mod <-
+  svm_rbf(cost = tune(), rbf_sigma = 1) %>%
+  set_engine("kernlab") %>%
+  set_mode("classification")
+
+svm_wflow <-
+  workflow() %>%
+  add_recipe(two_class_rec) %>%
+  add_model(svm_mod)
+
+vals <- c("underfit", "about right", "overfit")
+svm_res <-
+  tibble(
+    cost = c(0.005, 0.5, 5000),
+    label = factor(vals, levels = vals),
+    train = NA_real_,
+    test = NA_real_,
+    model = vector(mode = "list", length = 3)
+  )
+
+for (i in 1:nrow(svm_res)) {
+  set.seed(27)
+  tmp_mod <-
+    svm_wflow %>% finalize_workflow(svm_res %>% slice(i) %>% select(cost)) %>%
+    fit(training_set)
+  svm_res$train[i] <-
+    roc_auc_vec(training_set$class,
+                predict(tmp_mod, training_set, type = "prob")$.pred_Class1)
+  svm_res$test[i]  <-
+    roc_auc_vec(testing_set$class,
+                predict(tmp_mod, testing_set, type = "prob")$.pred_Class1)
+  svm_res$model[[i]] <- tmp_mod
+}
+
+
+te_plot <-
+  svm_res %>%
+  mutate(probs = map(model, ~ bind_cols(
+    data_grid, predict(.x, data_grid, type = "prob")
+  ))) %>%
+  dplyr::select(label, probs) %>%
+  unnest(cols = c(probs)) %>%
+  ggplot(aes(x = X1, y = X2)) +
+  geom_point(
+    data = testing_set,
+    aes(col = class),
+    alpha = .75,
+    cex = 1,
+    show.legend = FALSE
+  ) +
+  geom_contour(aes(z = .pred_Class1), breaks = 0.5, col = "black") +
+  facet_wrap( ~ label, nrow = 1) +
+  ggtitle("Test Set") +
+  labs(x = "Predictor A", y = "Predictor B") 
+
+tr_plot <-
+  svm_res %>%
+  mutate(probs = map(model, ~ bind_cols(
+    data_grid, predict(.x, data_grid, type = "prob")
+  ))) %>%
+  dplyr::select(label, probs) %>%
+  unnest(cols = c(probs)) %>%
+  ggplot(aes(x = X1, y = X2)) +
+  geom_point(
+    data = training_set,
+    aes(col = class),
+    alpha = .75,
+    cex = 1,
+    show.legend = FALSE
+  ) +
+  geom_contour(aes(z = .pred_Class1), breaks = 0.5, col = "black") +
+  facet_wrap( ~ label, nrow = 1) +
+  ggtitle("Training Set") +
+  labs(x = "Predictor A", y = "Predictor B")
+
+tr_plot 
+te_plot
+```
+
+---
+# Choosing tuning parameters `r I(hexes(c("recipes", "workflows", "parsnip", "tune")))`
+
+Let's take our previous model and add a few changes:
+
+```{r eval = FALSE}
+glm_spec <- logistic_reg() # Use the default `glm` engine
+
+glmn_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_ns(angle, deg_free = 10) %>% 
+  step_ns(distance, deg_free = 10) %>% 
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow <- 
+  workflow() %>% 
+  add_model(glm_spec) %>% 
+  add_recipe(glmn_rec)
+```
+
+---
+# Use regularized regression `r I(hexes(c("recipes", "workflows", "parsnip", "tune")))`
+
+```{r eval = FALSE}
+glm_spec <- 
+  logistic_reg() %>% 
+  set_engine("glmnet") #<<
+
+glmn_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_ns(angle, deg_free = 10) %>% 
+  step_ns(distance, deg_free = 10) %>% 
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow <- 
+  workflow() %>% 
+  add_model(glm_spec) %>% 
+  add_recipe(glmn_rec)
+```
+
+---
+# Add model parameters `r I(hexes(c("recipes", "workflows", "parsnip", "tune")))`
+
+```{r eval = FALSE}
+glm_spec <- 
+  logistic_reg(penalty, mixture) %>% #<<
+  set_engine("glmnet") 
+
+glmn_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_ns(angle, deg_free = 10) %>% 
+  step_ns(distance, deg_free = 10) %>% 
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow <- 
+  workflow() %>% 
+  add_model(glm_spec) %>% 
+  add_recipe(glmn_rec)
+```
+
+
+---
+# Mark them for tuning `r I(hexes(c("recipes", "workflows", "parsnip", "tune")))`
+
+```{r}
+glm_spec <- 
+  logistic_reg(penalty = tune(), mixture = tune()) %>% #<<
+  set_engine("glmnet") 
+
+glmn_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_ns(angle, deg_free = tune("angle")) %>% #<<
+  step_ns(distance, deg_free = tune("distance")) %>% #<<
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow <- 
+  workflow() %>% 
+  add_model(glm_spec) %>% 
+  add_recipe(glmn_rec)
+```
+
+---
+# Grid search
+
+This is the most basic (but very effective) way for tuning models. 
+
+tidymodels has pre-defined information on tuning parameters, such as their type, range, transformations, etc. 
+
+A grid can be created manually or automatically. 
+
+The `extract_parameter_set_dials()` function extracts the tuning parameters and the info. 
+
+The `grid_*()` functions can make a grid. 
+
+
+---
+# Manual grid - get parameters `r I(hexes(c("dials", "workflows")))`
+
+.pull-left[
+```{r get-param, eval = FALSE, tidy = FALSE}
+glmn_wflow %>% 
+  extract_parameter_set_dials()
+```
+This type of object can be updated (e.g. to change the ranges, etc)
+
+]
+.pull-right[
+```{r ref.label = 'get-param', echo = FALSE}
+```
+]
+
+
+---
+# Manual grid - create grid `r I(hexes(c("dials", "workflows")))`
+
+.pull-left[
+```{r get-grid, eval = FALSE}
+set.seed(2)
+grid <- 
+  glmn_wflow %>% 
+  extract_parameter_set_dials() %>% 
+  grid_latin_hypercube(size = 25)
+
+grid
+```
+
+
+This is a type of _space-filling design_. 
+
+It tends to do much better than random grids and is (usually) more efficient than regular grids. 
+
+]
+.pull-right[
+```{r ref.label = 'get-grid', echo = FALSE}
+```
+]
+
+
+---
+# The results `r I(hexes(c("dials", "workflows", "ggplot2")))`
+
+.pull-left[
+```{r show-grid, eval = FALSE}
+set.seed(2)
+grid <- 
+  glmn_wflow %>% 
+  extract_parameter_set_dials() %>% 
+  grid_latin_hypercube(size = 25)
+
+grid %>% 
+  ggplot(aes(penalty, mixture, col = angle)) + 
+  geom_point(cex = 4) + 
+  scale_x_log10()
+```
+
+Note that `penalty` was generated in log-10 units. 
+]
+
+.pull-right[
+```{r ref.label = 'show-grid', echo = FALSE, out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=5, fig.height=5.1}
+```
+]
+
+---
+# Grid search `r I(hexes(c("tune")))`
+
+The `tune_*()` functions can be used to tune models. 
+
+`tune_grid()` is pretty representative of their syntax (and is similar to `fit_resamples()`): 
+
+```{r tuning, cache = TRUE}
+ctrl <- control_grid(save_pred = TRUE)
+
+set.seed(9)
+glmn_res <- 
+  glmn_wflow %>% 
+  tune_grid(resamples = nhl_rs, grid = grid) # 'grid' = integer for automatic grids
+glmn_res
+```
+
+---
+# Grid results `r I(hexes(c("tune")))`
+
+```{r autoplot, out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=10, fig.height=5}
+autoplot(glmn_res)
+```
+
+
+---
+# Returning results `r I(hexes(c("tune")))`
+
+```{r}
+collect_metrics(glmn_res)
+
+collect_metrics(glmn_res, summarize = FALSE)
+```
+
+---
+# Picking a parameter combination `r I(hexes(c("tune")))`
+
+You can create a tibble of your own or use one of the `tune::select_*()` functions: 
+
+```{r}
+show_best(glmn_res, metric = "roc_auc")
+```
+
+
+---
+# Boosted Trees
+
+An ensemble method of tree-based models. 
+
+A tree-based model creates a series of splits on predictors that partition them into two groups to maximize the purity of the resulting sets. 
+
+This forms a series of if/then statements that make up a tree structure. 
+
+The creation of the tree has two phases: 
+
+ * The _growing_ phase where splits are made until we meet some condition   
+    * maximum depth, 
+    * run out of data
+ * Tree _pruning_ where the ends of the trees are removed until the "right sized" tree is found.  
+
+
+---
+# Tree-based Models
+
+```{r, echo = FALSE, fig.width=14, fig.height=8,  out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
+tree_mod <- 
+  rpart(
+  on_goal ~ . - player - offense_team - defence_team,
+  data = nhl_train,
+  control = rpart.control(maxdepth = 8)
+) %>% 
+  as.party()
+
+grid.newpage()
+grid.rect(gp = gpar(col = "#F9F8F3ff", fill = "#F9F8F3ff"))
+plot(tree_mod,
+     ip_args = list(id = FALSE, fill = "#F9F8F3ff"),
+     ep_args = list(fill = "#F9F8F3ff"),
+     tp_args = list(id = FALSE, bg = "#F9F8F3ff"),
+     newpage = FALSE)
+```
+
+---
+# Boosting
+
+Boosting methods fit a sequence of tree-based models. 
+
+Each is dependent on the last and tries to compensate to any poor results in the previous models
+
+* This is akin to gradient-based steepest ascent methods from calculus. 
+
+Most modern boosting methods have _a lot_ of tuning parameters.
+ * For tree growth and pruning (`min_n`, `max_depth`. etc).
+ * For boosting (`trees`, `stop_iter`, `learn_rate`)
+
+We'll use _early stopping_ where we stop boosting when a few iterations produces consecutively worse results. 
+
+---
+# Boosting `r I(hexes(c("recipes", "workflows", "parsnip", "tune")))`
+
+```{r, cache = TRUE}
+xgb_spec <-
+  boost_tree(
+    trees = 500,
+    min_n = tune(),
+    stop_iter = tune(),
+    tree_depth = tune(),
+    learn_rate = tune(),
+    loss_reduction = tune()
+  ) %>%
+  set_mode("classification") %>% 
+  set_engine("xgboost", validation = 1/10) # <- for better early stopping
+
+xgb_rec <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>% 
+  step_dummy(all_nominal_predictors()) %>%  # <- unusual, requested by xgboost
+  step_zv(all_predictors())
+
+xgb_wflow <- 
+  workflow() %>% 
+  add_model(xgb_spec) %>% 
+  add_recipe(xgb_rec)
+```
+
+---
+# Running in parallel
+
+.pull-left[
+
+.font80[
+
+Grid search, combined with resampling, ends up fitting a lot of models. 
+
+These models don't depend on one another and can be run in parallel. 
+
+We can use a _parallel backend_ to do this: 
+
+]
+
+```{r, eval= FALSE}
+cores <- parallel::detectCores(logical = FALSE)
+library(doParallel)
+cl <- makePSOCKcluster(cores)
+registerDoParallel(cl)
+```
+]
+.pull-right[
+```{r, echo = FALSE, echo = FALSE, out.width = '100%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=6, fig.height=6}
+load("resamples_times.RData")
+resamples_times %>%
+  dplyr::rename(operation = label) %>% 
+  ggplot(aes(y = id_alt, x = duration, fill = operation)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(y = NULL, x = "Elapsed Time") + 
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "top")
+```
+]
+
+
+---
+# Running in parallel
+
+There are various degrees of speed-ups that are fairly linear up until the number of physical cores. 
+
+```{r, echo = FALSE, echo = FALSE, out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=9, fig.height=4}
+load("xgb_times.RData")
+ggplot(times, aes(x = num_cores, y = speed_up, color = parallel_over, shape = parallel_over)) + 
+  geom_abline(lty = 1) + 
+  geom_point(size = 2) + 
+  geom_line() +
+  facet_wrap(~ preprocessing) + 
+  coord_obs_pred() + 
+  scale_color_manual(values = c("#7FC97F", "#386CB0")) +
+  labs(x = "Number of Workers", y = "Speed-up")  +
+  theme(legend.position = "top")
+```
+
+---
+# Tuning `r I(hexes(c("tune")))`
+
+This will take some time to run...
+
+```{r, cache = TRUE}
+set.seed(9)
+xgb_res <- 
+  xgb_wflow %>% 
+  tune_grid(resamples = nhl_rs, grid = 20)
+xgb_res
+```
+
+
+
+---
+# Tuning Results `r I(hexes(c("tune")))`
+
+```{r, fig.width=11, fig.height=4,  out.width = '100%'}
+autoplot(xgb_res)
+```
+
+
+
+---
+# Updating the workflow and final fit `r I(hexes(c("workflows", "tune")))`
+
+```{r}
+best_auc <- select_best(xgb_res, metric = "roc_auc")
+best_auc
+
+xgb_wflow <-
+  xgb_wflow %>% 
+  finalize_workflow(best_auc)
+
+test_res <- 
+  xgb_wflow %>% 
+  last_fit(split = nhl_split)
+test_res
+```
+
+---
+# Compare test set and resampling results `r I(hexes(c("tune")))`
+
+```{r}
+collect_metrics(test_res)
+
+# Resampling results
+show_best(xgb_res, metric = "roc_auc", n = 1)
+```
+
+The final fitted workflow, fit using the training set, can be pulled out:
+
+```{r}
+final_xgb_wflow <- 
+  test_res %>% 
+  extract_workflow()
+```
+
+
+---
+# Two-week test set results `r I(hexes(c("yardstick", "tune")))`
+
+
+.pull-left[
+```{r test-set, eval = FALSE}
+test_res %>% 
+  collect_predictions() %>% 
+  roc_curve(on_goal, .pred_yes) %>% 
+  autoplot()
+```
+
+]
+
+.pull-right[
+```{r ref.label = 'test-set', echo = FALSE, out.width = '90%', fig.align='center', dev = 'svg', dev.args = list(bg = "transparent"), fig.width=5, fig.height=5}
+```
+]
+
+
+---
+# Going forward
+
+There are a lot more things that tidymodels can do: 
+
+* Faster grid search using [racing methods](https://www.tmwr.org/grid-search.html#racing). 
+* [Iterative optimization](https://www.tmwr.org/iterative-search.html) tools
+* Creating a grid of preprocessors and model for [faster screening](https://www.tmwr.org/workflow-sets.html). 
+* [Deploying your model](https://vetiver.tidymodels.org/articles/vetiver.html) with vetiver
+
+
+
+ 

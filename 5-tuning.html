@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Model Tuning</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Max Kuhn" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+
+
+class: title-slide, left, middle
+background-image: url("images/tidymodels.svg")
+background-position: 85% 50%
+background-size: 30%
+background-color: #F9F8F3
+
+.pull-left[
+
+# Model Tuning
+
+## Max Kuhn
+
+### New York R Conference
+
+### Repo: [https://github.com/topepo/2022-nyr-workshop](https://github.com/topepo/https://github.com/topepo/2022-nyr-workshop)
+
+]
+
+
+
+
+
+
+---
+layout: false
+class: inverse, middle, center
+
+# [`tidymodels.org`](https://www.tidymodels.org/)
+
+# _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
+
+
+---
+# Tuning parameters
+
+These are model or preprocessing parameters that are important but cannot be estimated directly form the data. 
+
+Some examples:
+
+.pull-left[
+
+* Tree depth in decision trees.
+
+* Number of neighbors in a K-nearest neighbor model. 
+
+* Activation function (e.g. sigmoidal, ReLu) in neural networks. 
+
+* Number of PCA components to retain
+
+]
+.pull-right[
+
+* Covariance/correlation matrix structure in mixed models.
+
+* Data distribution in survival models.
+
+* Spline degrees of freedom. 
+]
+
+---
+# Optimizing tuning parameters
+
+The main approach is to try different values and measure their performance. This can lead us to good values for these parameters. 
+
+The main two classes of optimization models are: 
+
+ * _Grid search_ where a pre-defined set of candidate values are tested. 
+ 
+ * _Iterative search_ methods suggest/estimate new values of candidate parameters to evaluate. 
+
+Once the value(s) of the parameter(s) are determine, a model can be finalized but fitting the model to the entire training set. 
+
+
+---
+# Measuring the effect of tuning parameters
+
+We need performance metrics to tell us which candidate values are good and which are not. 
+
+Using the test set, or simply re-predicting the training set, are very bad ideas. 
+
+Since tuning parameters often control complexity, they can often lead to [_overfitting_](https://www.tmwr.org/tuning.html#overfitting-bad). 
+
+* This is where the model does very well on the training set but poorly on new data. 
+
+Using _resampling_ to estimate performance can help identify parameters that lead to overfitting. 
+
+The cost is computational time. 
+
+---
+# Overfitting with machine learning
+
+&lt;img src="images/tuning-overfitting-1.svg" width="60%" style="display: block; margin: auto;" /&gt;&lt;img src="images/tuning-overfitting-2.svg" width="60%" style="display: block; margin: auto;" /&gt;
+
+---
+# Choosing tuning parameters &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+Let's take our previous model and add a few changes:
+
+
+```r
+glm_spec &lt;- logistic_reg() # Use the default `glm` engine
+
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
+  add_recipe(glmn_rec)
+```
+
+---
+# Use regularized regression &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+
+```r
+glm_spec &lt;- 
+  logistic_reg() %&gt;% 
+* set_engine("glmnet")
+
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
+  add_recipe(glmn_rec)
+```
+
+---
+# Add model parameters &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+
+```r
+glm_spec &lt;- 
+* logistic_reg(penalty, mixture) %&gt;%
+  set_engine("glmnet") 
+
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
+  add_recipe(glmn_rec)
+```
+
+
+---
+# Mark them for tuning &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+
+```r
+glm_spec &lt;- 
+* logistic_reg(penalty = tune(), mixture = tune()) %&gt;%
+  set_engine("glmnet") 
+
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+* step_ns(angle, deg_free = tune("angle")) %&gt;%
+* step_ns(distance, deg_free = tune("distance")) %&gt;%
+  step_normalize(all_numeric_predictors()) 
+
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
+  add_recipe(glmn_rec)
+```
+
+---
+# Grid search
+
+This is the most basic (but very effective) way for tuning models. 
+
+tidymodels has pre-defined information on tuning parameters, such as their type, range, transformations, etc. 
+
+A grid can be created manually or automatically. 
+
+The `extract_parameter_set_dials()` function extracts the tuning parameters and the info. 
+
+The `grid_*()` functions can make a grid. 
+
+
+---
+# Manual grid - get parameters &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/dials.svg" class="title-hex"&gt;
+
+.pull-left[
+
+```r
+glmn_wflow %&gt;% 
+  extract_parameter_set_dials()
+```
+This type of object can be updated (e.g. to change the ranges, etc)
+
+]
+.pull-right[
+
+```
+#&gt; Collection of 4 parameters for tuning
+#&gt; 
+#&gt;  identifier     type    object
+#&gt;     penalty  penalty nparam[+]
+#&gt;     mixture  mixture nparam[+]
+#&gt;       angle deg_free nparam[+]
+#&gt;    distance deg_free nparam[+]
+```
+]
+
+
+---
+# Manual grid - create grid &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/dials.svg" class="title-hex"&gt;
+
+.pull-left[
+
+```r
+set.seed(2)
+grid &lt;- 
+  glmn_wflow %&gt;% 
+  extract_parameter_set_dials() %&gt;% 
+  grid_latin_hypercube(size = 25)
+
+grid
+```
+
+
+This is a type of _space-filling design_. 
+
+It tends to do much better than random grids and is (usually) more efficient than regular grids. 
+
+]
+.pull-right[
+
+```
+#&gt; # A tibble: 25 × 4
+#&gt;    penalty mixture angle distance
+#&gt;      &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt;
+#&gt; 1 3.11e- 1   0.271    10        3
+#&gt; 2 7.52e- 7   0.649     9        6
+#&gt; 3 6.40e- 4   0.544     6       11
+#&gt; 4 2.22e- 6   0.109     4        8
+#&gt; 5 6.83e-10   0.289    14       13
+#&gt; 6 5.21e- 6   0.967     3        2
+#&gt; # … with 19 more rows
+```
+]
+
+
+---
+# The results &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/ggplot2.svg" class="title-hex"&gt;&lt;img src="images/dials.svg" class="title-hex"&gt;
+
+.pull-left[
+
+```r
+set.seed(2)
+grid &lt;- 
+  glmn_wflow %&gt;% 
+  extract_parameter_set_dials() %&gt;% 
+  grid_latin_hypercube(size = 25)
+
+grid %&gt;% 
+  ggplot(aes(penalty, mixture, col = angle)) + 
+  geom_point(cex = 4) + 
+  scale_x_log10()
+```
+
+Note that `penalty` was generated in log-10 units. 
+]
+
+.pull-right[
+&lt;img src="images/tuning-unnamed-chunk-7-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+# Grid search &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+The `tune_*()` functions can be used to tune models. 
+
+`tune_grid()` is pretty representative of their syntax (and is similar to `fit_resamples()`): 
+
+
+```r
+ctrl &lt;- control_grid(save_pred = TRUE)
+
+set.seed(9)
+glmn_res &lt;- 
+  glmn_wflow %&gt;% 
+  tune_grid(resamples = nhl_rs, grid = grid) # 'grid' = integer for automatic grids
+glmn_res
+#&gt; # Tuning results
+#&gt; # 10-fold cross-validation 
+#&gt; # A tibble: 10 × 4
+#&gt;   splits             id     .metrics          .notes          
+#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;          
+#&gt; 1 &lt;split [8199/911]&gt; Fold01 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 2 &lt;split [8199/911]&gt; Fold02 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 3 &lt;split [8199/911]&gt; Fold03 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 4 &lt;split [8199/911]&gt; Fold04 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 5 &lt;split [8199/911]&gt; Fold05 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 6 &lt;split [8199/911]&gt; Fold06 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; # … with 4 more rows
+```
+
+---
+# Grid results &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+```r
+autoplot(glmn_res)
+```
+
+&lt;img src="images/tuning-autoplot-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Returning results &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+```r
+collect_metrics(glmn_res)
+#&gt; # A tibble: 50 × 10
+#&gt;       penalty mixture angle distance .metric  .estimator  mean     n std_err .config
+#&gt;         &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;  
+#&gt; 1 0.311         0.271    10        3 accuracy binary     0.547    10 0.00667 Prepro…
+#&gt; 2 0.311         0.271    10        3 roc_auc  binary     0.617    10 0.00839 Prepro…
+#&gt; 3 0.000000752   0.649     9        6 accuracy binary     0.618    10 0.00847 Prepro…
+#&gt; 4 0.000000752   0.649     9        6 roc_auc  binary     0.656    10 0.00757 Prepro…
+#&gt; 5 0.000640      0.544     6       11 accuracy binary     0.621    10 0.00927 Prepro…
+#&gt; 6 0.000640      0.544     6       11 roc_auc  binary     0.657    10 0.00760 Prepro…
+#&gt; # … with 44 more rows
+
+collect_metrics(glmn_res, summarize = FALSE)
+#&gt; # A tibble: 500 × 9
+#&gt;   id     penalty mixture angle distance .metric  .estimator .estimate .config       
+#&gt;   &lt;chr&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;         
+#&gt; 1 Fold01   0.311   0.271    10        3 accuracy binary         0.513 Preprocessor0…
+#&gt; 2 Fold01   0.311   0.271    10        3 roc_auc  binary         0.574 Preprocessor0…
+#&gt; 3 Fold02   0.311   0.271    10        3 accuracy binary         0.538 Preprocessor0…
+#&gt; 4 Fold02   0.311   0.271    10        3 roc_auc  binary         0.605 Preprocessor0…
+#&gt; 5 Fold03   0.311   0.271    10        3 accuracy binary         0.537 Preprocessor0…
+#&gt; 6 Fold03   0.311   0.271    10        3 roc_auc  binary         0.623 Preprocessor0…
+#&gt; # … with 494 more rows
+```
+
+---
+# Picking a parameter combination &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+You can create a tibble of your own or use one of the `tune::select_*()` functions: 
+
+
+```r
+show_best(glmn_res, metric = "roc_auc")
+#&gt; # A tibble: 5 × 10
+#&gt;    penalty mixture angle distance .metric .estimator  mean     n std_err .config    
+#&gt;      &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;      
+#&gt; 1 4.93e- 4   0.565     7       14 roc_auc binary     0.658    10 0.00761 Preprocess…
+#&gt; 2 1.41e- 8   0.216     7       12 roc_auc binary     0.657    10 0.00753 Preprocess…
+#&gt; 3 6.40e- 4   0.544     6       11 roc_auc binary     0.657    10 0.00760 Preprocess…
+#&gt; 4 1.77e- 7   0.907    13       12 roc_auc binary     0.657    10 0.00756 Preprocess…
+#&gt; 5 2.27e-10   0.370    10       11 roc_auc binary     0.657    10 0.00756 Preprocess…
+```
+
+
+---
+# Boosted Trees
+
+An ensemble method of tree-based models. 
+
+A tree-based model creates a series of splits on predictors that partition them into two groups to maximize the purity of the resulting sets. 
+
+This forms a series of if/then statements that make up a tree structure. 
+
+The creation of the tree has two phases: 
+
+ * The _growing_ phase where splits are made until we meet some condition   
+    * maximum depth, 
+    * run out of data
+ * Tree _pruning_ where the ends of the trees are removed until the "right sized" tree is found.  
+
+
+---
+# Tree-based Models
+
+&lt;img src="images/tuning-unnamed-chunk-10-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
+---
+# Boosting
+
+Boosting methods fit a sequence of tree-based models. 
+
+Each is dependent on the last and tries to compensate to any poor results in the previous models
+
+* This is akin to gradient-based steepest ascent methods from calculus. 
+
+Most modern boosting methods have _a lot_ of tuning parameters.
+ * For tree growth and pruning (`min_n`, `max_depth`. etc).
+ * For boosting (`trees`, `stop_iter`, `learn_rate`)
+
+We'll use _early stopping_ where we stop boosting when a few iterations produces consecutively worse results. 
+
+---
+# Boosting &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
+
+
+```r
+xgb_spec &lt;-
+  boost_tree(
+    trees = 500,
+    min_n = tune(),
+    stop_iter = tune(),
+    tree_depth = tune(),
+    learn_rate = tune(),
+    loss_reduction = tune()
+  ) %&gt;%
+  set_mode("classification") %&gt;% 
+  set_engine("xgboost", validation = 1/10) # &lt;- for better early stopping
+
+xgb_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;%  # &lt;- unusual, requested by xgboost
+  step_zv(all_predictors())
+
+xgb_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(xgb_spec) %&gt;% 
+  add_recipe(xgb_rec)
+```
+
+---
+# Running in parallel
+
+.pull-left[
+
+.font80[
+
+Grid search, combined with resampling, ends up fitting a lot of models. 
+
+These models don't depend on one another and can be run in parallel. 
+
+We can use a _parallel backend_ to do this: 
+
+]
+
+
+```r
+cores &lt;- parallel::detectCores(logical = FALSE)
+library(doParallel)
+cl &lt;- makePSOCKcluster(cores)
+registerDoParallel(cl)
+```
+]
+.pull-right[
+&lt;img src="images/tuning-unnamed-chunk-13-1.svg" width="100%" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+# Running in parallel
+
+There are various degrees of speed-ups that are fairly linear up until the number of physical cores. 
+
+&lt;img src="images/tuning-unnamed-chunk-14-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
+---
+# Tuning &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+This will take some time to run...
+
+
+```r
+set.seed(9)
+xgb_res &lt;- 
+  xgb_wflow %&gt;% 
+  tune_grid(resamples = nhl_rs, grid = 20)
+xgb_res
+#&gt; # Tuning results
+#&gt; # 10-fold cross-validation 
+#&gt; # A tibble: 10 × 4
+#&gt;   splits             id     .metrics          .notes          
+#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;          
+#&gt; 1 &lt;split [8199/911]&gt; Fold01 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 2 &lt;split [8199/911]&gt; Fold02 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 3 &lt;split [8199/911]&gt; Fold03 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 4 &lt;split [8199/911]&gt; Fold04 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 5 &lt;split [8199/911]&gt; Fold05 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; 6 &lt;split [8199/911]&gt; Fold06 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
+#&gt; # … with 4 more rows
+```
+
+
+
+---
+# Tuning Results &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+```r
+autoplot(xgb_res)
+```
+
+&lt;img src="images/tuning-unnamed-chunk-16-1.svg" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+# Updating the workflow and final fit &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+```r
+best_auc &lt;- select_best(xgb_res, metric = "roc_auc")
+best_auc
+#&gt; # A tibble: 1 × 6
+#&gt;   min_n tree_depth learn_rate loss_reduction stop_iter .config              
+#&gt;   &lt;int&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;     &lt;int&gt; &lt;chr&gt;                
+#&gt; 1    26         15     0.0365           2.51        17 Preprocessor1_Model11
+
+xgb_wflow &lt;-
+  xgb_wflow %&gt;% 
+  finalize_workflow(best_auc)
+
+test_res &lt;- 
+  xgb_wflow %&gt;% 
+  last_fit(split = nhl_split)
+test_res
+#&gt; # Resampling results
+#&gt; # Manual resampling 
+#&gt; # A tibble: 1 × 6
+#&gt;   splits              id               .metrics .notes   .predictions .workflow 
+#&gt;   &lt;list&gt;              &lt;chr&gt;            &lt;list&gt;   &lt;list&gt;   &lt;list&gt;       &lt;list&gt;    
+#&gt; 1 &lt;split [9110/3037]&gt; train/test split &lt;tibble&gt; &lt;tibble&gt; &lt;tibble&gt;     &lt;workflow&gt;
+```
+
+---
+# Compare test set and resampling results &lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+```r
+collect_metrics(test_res)
+#&gt; # A tibble: 2 × 4
+#&gt;   .metric  .estimator .estimate .config             
+#&gt;   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;               
+#&gt; 1 accuracy binary         0.685 Preprocessor1_Model1
+#&gt; 2 roc_auc  binary         0.736 Preprocessor1_Model1
+
+# Resampling results
+show_best(xgb_res, metric = "roc_auc", n = 1)
+#&gt; # A tibble: 1 × 11
+#&gt;   min_n tree_depth learn_rate loss_reduction stop_iter .metric .estimator  mean
+#&gt;   &lt;int&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;     &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt;
+#&gt; 1    26         15     0.0365           2.51        17 roc_auc binary     0.751
+#&gt; # … with 3 more variables: n &lt;int&gt;, std_err &lt;dbl&gt;, .config &lt;chr&gt;
+```
+
+The final fitted workflow, fit using the training set, can be pulled out:
+
+
+```r
+final_xgb_wflow &lt;- 
+  test_res %&gt;% 
+  extract_workflow()
+```
+
+
+---
+# Two-week test set results &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;
+
+
+.pull-left[
+
+```r
+test_res %&gt;% 
+  collect_predictions() %&gt;% 
+  roc_curve(on_goal, .pred_yes) %&gt;% 
+  autoplot()
+```
+
+]
+
+.pull-right[
+&lt;img src="images/tuning-unnamed-chunk-20-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+]
+
+
+---
+# Going forward
+
+There are a lot more things that tidymodels can do: 
+
+* Faster grid search using [racing methods](https://www.tmwr.org/grid-search.html#racing). 
+* [Iterative optimization](https://www.tmwr.org/iterative-search.html) tools
+* Creating a grid of preprocessors and model for [faster screening](https://www.tmwr.org/workflow-sets.html). 
+* [Deploying your model](https://vetiver.tidymodels.org/articles/vetiver.html) with vetiver
+
+
+
+ 
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "<div class=\"progress-bar-container\">\n  <div class=\"progress-bar\" style=\"width: calc(%current% / %total% * 100%);\">\n  </div>\n</div>\n",
+"highlightStyle": "rainbow",
+"highlightLanguage": ["r", "css", "yaml"],
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
