@@ -174,7 +174,7 @@ We'll demonstrate the `r pkg(recipes)` package for all of your data needs.
 ---
 # Recipes prepare your data for modeling
 
-The package is extensible framework for pipeable sequences of feature engineering steps provides preprocessing tools to be applied to data. 
+The package is an extensible framework for pipeable sequences of feature engineering steps  that provide preprocessing tools to be applied to data. 
     
 Statistical parameters for the steps can be estimated from an initial data set and then applied to other data sets. 
     
@@ -234,7 +234,7 @@ nhl_rec <-
   step_rm(date_time) #<<
 ```
 
-At this point, we don't need `date` anymore. We'll just delete it form the data but there are ways to change its role to an arbitrary value.  
+At this point, we don't need `date` anymore. We'll just delete it from the data but there are ways to change its role to an arbitrary value.  
 
 ---
 # A first recipe -create indicator variables `r I(hexes(c("recipes")))`
@@ -308,7 +308,7 @@ nhl_rec <-
   step_corr(all_numeric_predictors(), threshold = 0.9) #<<
 ```
 
-To deal with highly correlated predictors, find the minimum predictor set to remove to make the pairwise correlations are less than 0.9.
+To deal with highly correlated predictors, find the minimum predictor set to remove to make the pairwise correlations less than 0.9.
 
 There are other filter steps too, 
 
@@ -373,7 +373,7 @@ There are `r length(unique(nhl_train$player))` unique player values in our train
  * We _could_ make the full set of indicator variables...
  * Or using [feature hashing](https://www.tmwr.org/categorical.html#feature-hashing) to make a subset.
  
-Instead, we will using effect encoding to replace the `player` column with the estimated effect of that predictor. 
+Instead, we will be using effect encoding to replace the `player` column with the estimated effect of that predictor. 
 
 ---
 # Per-player statistics
@@ -433,7 +433,7 @@ nhl_rec <-
   step_normalize(all_numeric_predictors()) 
 ```
 
-It is very important to appropriately validated the effect encoding step to make sure that we are not overfitting. 
+It is very important to appropriately validate the effect encoding step to make sure that we are not overfitting. 
 
 ---
 # Recipes are estimated
@@ -448,7 +448,7 @@ _Every_ preprocessing step in a recipe that involved calculations uses the _trai
  
 and so on. 
 
-Once a a recipe is added to a workflow, this occurs when `fit()` is called. 
+Once a recipe is added to a workflow, this occurs when `fit()` is called. 
 
 
 ---
