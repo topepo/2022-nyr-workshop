@@ -258,7 +258,7 @@ nhl_rs
 
 We will fit `r nrow(nhl_rs)` models on  `r nrow(nhl_rs)` slightly different analysis sets. 
 
-Each will produce a separate ROC curves and we will average the  `r nrow(nhl_rs)` areas under those curves to get the resampling estimate of that statistic. 
+Each will produce a separate ROC curve and we will average the  `r nrow(nhl_rs)` areas under those curves to get the resampling estimate of that statistic. 
 
 
 ```{r, include = FALSE}
@@ -479,6 +479,6 @@ holdout_roc_plots(nhl_roc_curves)
 ---
 # Some notes
 
-* These models fits are independent of one another. [Parallel processing](https://www.tmwr.org/resampling.html#parallel) can be used to significantly speed up the training process. 
+* These model fits are independent of one another. [Parallel processing](https://www.tmwr.org/resampling.html#parallel) can be used to significantly speed up the training process. 
 * The individual models can [be saved](https://www.tmwr.org/resampling.html#extract) so you can look at variation in the model parameters or recipes steps. 
 * If you are interested in a [validation set](https://www.tmwr.org/resampling.html#validation), tidymodels considers that a single resample of the data. Everything else in this chapter works the same. 
