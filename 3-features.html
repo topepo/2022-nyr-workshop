@@ -329,7 +329,7 @@ Nonlinear transforms like _natural splines_ and so on.
 ---
 # What do we do with the player data? 
 
-There are 624 unique player values in our training set. 
+There are 618 unique player values in our training set. 
 
  * We _could_ make the full set of indicator variables...
  * Or using [feature hashing](https://www.tmwr.org/categorical.html#feature-hashing) to make a subset.
@@ -353,6 +353,11 @@ The embed package has recipes steps for effect encodings.
 
 ]
 
+
+---
+# Partial pooling
+
+&lt;img src="images/features-effect-compare-1.svg" width="50%" style="display: block; margin: auto;" /&gt;
 
 
 ---
@@ -474,51 +479,51 @@ nhl_fit
 #&gt; 
 #&gt; Coefficients:
 #&gt;                (Intercept)                      period                     coord_x  
-#&gt;                  -2.35e-01                    2.51e-02                    3.32e-02  
+#&gt;                  -0.224572                    0.018814                    0.013178  
 #&gt;                    coord_y                   game_time                      player  
-#&gt;                  -1.72e-02                    6.99e-02                   -4.08e-01  
+#&gt;                  -0.022486                    0.065183                   -0.445195  
 #&gt;              offense_goals               defense_goals                 player_diff  
-#&gt;                  -8.81e-02                   -1.42e-01                    3.99e-02  
+#&gt;                  -0.051041                   -0.151670                    0.047803  
 #&gt;           behind_goal_line                        year              date_time_year  
-#&gt;                   3.67e-03                    1.09e-01                          NA  
+#&gt;                   0.014560                    0.033259                          NA  
 #&gt;         date_time_LaborDay       date_time_NewYearsDay         period_type_regular  
-#&gt;                   2.58e-02                   -4.87e-03                    6.98e-02  
+#&gt;                   0.000688                    0.004971                    0.080099  
 #&gt; strength_even_short_handed         strength_power_play       strength_short_handed  
-#&gt;                   1.05e-02                   -8.37e-02                          NA  
+#&gt;                   0.023537                   -0.089361                          NA  
 #&gt;           offense_team_ARI            offense_team_BOS            offense_team_BUF  
-#&gt;                  -2.94e-02                    8.79e-03                    2.53e-02  
+#&gt;                   0.024604                    0.044756                    0.106689  
 #&gt;           offense_team_CAR            offense_team_CBJ            offense_team_CGY  
-#&gt;                   4.14e-02                    1.05e-02                    4.98e-02  
+#&gt;                   0.091049                    0.039150                    0.089958  
 #&gt;           offense_team_CHI            offense_team_COL            offense_team_DAL  
-#&gt;                  -2.81e-02                    3.32e-02                    4.44e-02  
+#&gt;                   0.024835                    0.076285                    0.086634  
 #&gt;           offense_team_DET            offense_team_EDM            offense_team_FLA  
-#&gt;                   4.13e-03                    4.79e-02                   -4.67e-02  
+#&gt;                   0.046268                    0.073401                    0.020081  
 #&gt;           offense_team_LAK            offense_team_MIN            offense_team_MTL  
-#&gt;                  -7.38e-03                    1.21e-02                   -3.95e-03  
+#&gt;                   0.045713                    0.030004                    0.043533  
 #&gt;           offense_team_NJD            offense_team_NSH            offense_team_NYI  
-#&gt;                  -1.29e-02                   -8.06e-03                   -1.30e-03  
+#&gt;                   0.047068                    0.028561                    0.073172  
 #&gt;           offense_team_NYR            offense_team_OTT            offense_team_PHI  
-#&gt;                   5.94e-02                    2.91e-02                    6.76e-02  
+#&gt;                   0.138083                    0.079873                    0.112620  
 #&gt;           offense_team_PIT            offense_team_SJS            offense_team_STL  
-#&gt;                   1.22e-01                    3.87e-02                    1.37e-02  
+#&gt;                   0.210440                    0.107674                    0.067963  
 #&gt;           offense_team_TBL            offense_team_TOR            offense_team_VAN  
-#&gt;                  -8.27e-03                    4.85e-02                   -1.45e-02  
+#&gt;                   0.059440                    0.070552                    0.041150  
 #&gt;           offense_team_WPG            offense_team_WSH            defence_team_ARI  
-#&gt;                   1.48e-02                    3.23e-02                   -1.62e-02  
+#&gt;                   0.051747                    0.124667                    0.020182  
 #&gt;           defence_team_BOS            defence_team_BUF            defence_team_CAR  
-#&gt;                  -6.58e-03                   -2.94e-02                   -4.34e-02  
+#&gt;                   0.029064                   -0.016739                    0.002205  
 #&gt;           defence_team_CBJ            defence_team_CGY            defence_team_CHI  
-#&gt;                  -1.94e-02                   -1.60e-03                   -1.86e-02  
+#&gt;                   0.027262                    0.009870                    0.022186  
 #&gt;           defence_team_COL            defence_team_DAL            defence_team_DET  
-#&gt;                   2.31e-02                   -3.25e-02                   -2.85e-02  
+#&gt;                   0.055980                   -0.017798                   -0.005028  
 #&gt;           defence_team_EDM            defence_team_FLA            defence_team_LAK  
-#&gt;                  -2.49e-02                   -4.08e-02                   -7.94e-05  
+#&gt;                   0.022007                   -0.025276                   -0.016538  
 #&gt;           defence_team_MIN            defence_team_MTL            defence_team_NJD  
-#&gt;                  -2.25e-02                   -2.53e-02                   -4.28e-02  
+#&gt;                   0.006556                    0.008584                   -0.011414  
 #&gt;           defence_team_NSH            defence_team_NYI            defence_team_NYR  
-#&gt;                  -4.46e-02                   -8.46e-02                   -4.50e-02  
+#&gt;                  -0.018512                   -0.033289                    0.009163  
 #&gt;           defence_team_OTT            defence_team_PHI            defence_team_PIT  
-#&gt;                  -1.67e-02                   -3.16e-02                          NA  
+#&gt;                   0.008221                    0.011260                          NA  
 #&gt; 
 #&gt; ...
 #&gt; and 44 more lines.
@@ -538,11 +543,11 @@ predict(nhl_fit, nhl_test)
 #&gt;   .pred_class
 #&gt;   &lt;fct&gt;      
 #&gt; 1 no         
-#&gt; 2 yes        
-#&gt; 3 yes        
-#&gt; 4 yes        
+#&gt; 2 no         
+#&gt; 3 no         
+#&gt; 4 no         
 #&gt; 5 no         
-#&gt; 6 yes        
+#&gt; 6 no         
 #&gt; # … with 3,031 more rows
 ```
 
@@ -560,12 +565,12 @@ tidy(nhl_rec)
 #&gt; # A tibble: 9 × 6
 #&gt;   number operation type          trained skip  id                 
 #&gt;    &lt;int&gt; &lt;chr&gt;     &lt;chr&gt;         &lt;lgl&gt;   &lt;lgl&gt; &lt;chr&gt;              
-#&gt; 1      1 step      date          FALSE   FALSE date_YRzOZ         
-#&gt; 2      2 step      holiday       FALSE   FALSE holiday_uo6xg      
-#&gt; 3      3 step      rm            FALSE   FALSE rm_1Fv0a           
-#&gt; 4      4 step      lencode_mixed FALSE   FALSE lencode_mixed_968Ut
-#&gt; 5      5 step      dummy         FALSE   FALSE dummy_NSJch        
-#&gt; 6      6 step      zv            FALSE   FALSE zv_Ja5UA           
+#&gt; 1      1 step      date          FALSE   FALSE date_5JYHV         
+#&gt; 2      2 step      holiday       FALSE   FALSE holiday_OI1rx      
+#&gt; 3      3 step      rm            FALSE   FALSE rm_G4hTH           
+#&gt; 4      4 step      lencode_mixed FALSE   FALSE lencode_mixed_SvrVF
+#&gt; 5      5 step      dummy         FALSE   FALSE dummy_MxKEo        
+#&gt; 6      6 step      zv            FALSE   FALSE zv_GKLuK           
 #&gt; # … with 3 more rows
 ```
 
@@ -580,16 +585,16 @@ After fitting the recipe, you might want access to the statistics from each step
 nhl_fit %&gt;% 
   extract_recipe() %&gt;% 
   tidy(number = 4) # For per-player estimates
-#&gt; # A tibble: 625 × 4
+#&gt; # A tibble: 619 × 4
 #&gt;   level            value terms  id                 
 #&gt;   &lt;chr&gt;            &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;              
-#&gt; 1 aaron_ekblad    0.242  player lencode_mixed_968Ut
-#&gt; 2 adam_clendening 0.134  player lencode_mixed_968Ut
-#&gt; 3 adam_cracknell  0.255  player lencode_mixed_968Ut
-#&gt; 4 adam_henrique   0.242  player lencode_mixed_968Ut
-#&gt; 5 adam_larsson    0.172  player lencode_mixed_968Ut
-#&gt; 6 adam_lowry      0.0894 player lencode_mixed_968Ut
-#&gt; # … with 619 more rows
+#&gt; 1 aaron_ekblad    0.226  player lencode_mixed_SvrVF
+#&gt; 2 adam_clendening 0.0961 player lencode_mixed_SvrVF
+#&gt; 3 adam_cracknell  0.266  player lencode_mixed_SvrVF
+#&gt; 4 adam_henrique   0.106  player lencode_mixed_SvrVF
+#&gt; 5 adam_larsson    0.170  player lencode_mixed_SvrVF
+#&gt; 6 adam_lowry      0.0880 player lencode_mixed_SvrVF
+#&gt; # … with 613 more rows
 ```
 
 ---

@@ -413,6 +413,38 @@ The embed package has recipes steps for effect encodings.
 ]
 
 
+---
+# Partial pooling
+
+```{r effect-compare, echo = FALSE, out.width = '50%', fig.width = 4, fig.height = 4, fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
+library(embed)
+
+estimates <- 
+  recipe(on_goal ~ ., data = nhl_train) %>% 
+  step_date(date_time, features = c("dow", "month", "year")) %>% 
+  step_holiday(date_time) %>% 
+  step_rm(date_time) %>% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %>%   #<<
+  step_dummy(all_nominal_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
+  step_ns(angle, deg_free = 10) %>% 
+  step_ns(distance, deg_free = 10) %>% 
+  step_normalize(all_numeric_predictors()) %>% 
+  prep() %>% 
+  tidy(number = 4) %>% 
+  select(player = level, estimate = value)
+
+inner_join(player_stats, estimates, by = "player") %>% 
+  mutate(estimate = binomial()$linkinv(estimate)) %>% 
+  ggplot(aes(x = rate, y = estimate)) + 
+  geom_abline(col = "green", lty = 2) +
+  geom_point(aes(size = num_shots), alpha = 1/3) +
+  lims(x = 0:1, y = 0:1) +
+  coord_fixed() +
+  scale_size(range = c(1/3, 3)) +
+  labs(x = "Raw Rate", y = "Estimated via Effects Encoding")
+```
+
 
 ---
 # The last recipe  `r I(hexes(c("recipes", "embed")))`
