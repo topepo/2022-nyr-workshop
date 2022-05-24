@@ -14,3 +14,15 @@ remotes::install_github("topepo/ongoal")
 ```
 
 You should also have the RStudio IDE installed. 
+
+## Slides
+
+* [*Introduction*](https://topepo.github.io/2022-nyr-workshop/1-introduction.html) - why tidymodels? example data, tidyverse review.
+
+* [*Models*](https://topepo.github.io/2022-nyr-workshop/2-models.html) - what is the model?, data splitting, basic R models, parsnip introduction, some broom.
+
+* [*Feature engineering*](https://topepo.github.io/2022-nyr-workshop/3-features.html) - recipes introduction, 
+
+* [*Resampling*](https://topepo.github.io/2022-nyr-workshop/4-resampling.html) - why resample, cross-validation, `fit_resamples()`, shinymodels.
+
+* [*Model tuning*](https://topepo.github.io/2022-nyr-workshop/5-tuning.html) - tuning parameters, grids, grid search, glmnet, boosting, parallel processing, test set evaluation. 
