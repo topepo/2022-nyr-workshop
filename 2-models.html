@@ -395,9 +395,9 @@ fit_lm
 #&gt; 
 #&gt; Coefficients:
 #&gt;               (Intercept)                   distance  strengtheven_short_handed  
-#&gt;                  -0.01548                   -0.00555                   10.88236  
+#&gt;                  -0.00938                   -0.00565                    0.26224  
 #&gt;        strengthpower_play       strengthshort_handed  
-#&gt;                  -0.75775                   -0.84678  
+#&gt;                  -0.85928                   -0.46826  
 #&gt; 
 #&gt; Degrees of Freedom: 9109 Total (i.e. Null);  9105 Residual
 #&gt; Null Deviance:	    12500 
@@ -487,9 +487,9 @@ cls_fit
 #&gt; 
 #&gt; Coefficients:
 #&gt;               (Intercept)                   distance  strengtheven_short_handed  
-#&gt;                  -0.01548                   -0.00555                   10.88236  
+#&gt;                  -0.00938                   -0.00565                    0.26224  
 #&gt;        strengthpower_play       strengthshort_handed  
-#&gt;                  -0.75775                   -0.84678  
+#&gt;                  -0.85928                   -0.46826  
 #&gt; 
 #&gt; Degrees of Freedom: 9109 Total (i.e. Null);  9105 Residual
 #&gt; Null Deviance:	    12500 
@@ -524,11 +524,11 @@ stan_fit
 #&gt;  predictors:   5
 #&gt; ------
 #&gt;                           Median MAD_SD
-#&gt; (Intercept)                 0.0    0.0 
-#&gt; distance                    0.0    0.0 
-#&gt; strengtheven_short_handed 164.0  142.7 
-#&gt; strengthpower_play         -0.8    0.6 
-#&gt; strengthshort_handed       -1.1    1.3 
+#&gt; (Intercept)                0.0    0.0  
+#&gt; distance                   0.0    0.0  
+#&gt; strengtheven_short_handed  0.3    1.6  
+#&gt; strengthpower_play        -0.9    0.6  
+#&gt; strengthshort_handed      -0.7    1.4  
 #&gt; 
 #&gt; ------
 #&gt; * For help interpreting the printed output see ?print.stanreg
@@ -565,13 +565,13 @@ predict(stan_fit, shuffled_data) %&gt;% slice(1:3)
 #&gt; 1 yes        
 #&gt; 2 yes        
 #&gt; 3 yes
-predict(stan_fit, shuffled_data, type = "pred_int") %&gt;% slice(1:3)
+predict(stan_fit, shuffled_data, type = "conf_int") %&gt;% slice(1:3)
 #&gt; # A tibble: 3 × 4
 #&gt;   .pred_lower_yes .pred_upper_yes .pred_lower_no .pred_upper_no
 #&gt;             &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;          &lt;dbl&gt;
-#&gt; 1               0               1              0              1
-#&gt; 2               0               1              0              1
-#&gt; 3               0               1              0              1
+#&gt; 1           0.585           0.647          0.353          0.415
+#&gt; 2           0.538           0.559          0.441          0.462
+#&gt; 3           0.511           0.539          0.461          0.489
 ```
 
 ---
@@ -613,7 +613,7 @@ pred_results %&gt;% roc_auc(truth = on_goal, .pred_no)
 #&gt; # A tibble: 1 × 3
 #&gt;   .metric .estimator .estimate
 #&gt;   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
-#&gt; 1 roc_auc binary           0.5
+#&gt; 1 roc_auc binary         0.429
 ```
 
 
@@ -631,8 +631,8 @@ pred_results %&gt;% cls_metrics(truth = on_goal, estimate = .pred_class, .pred_n
 #&gt; # A tibble: 2 × 3
 #&gt;   .metric  .estimator .estimate
 #&gt;   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
-#&gt; 1 accuracy binary           0.6
-#&gt; 2 roc_auc  binary           0.5
+#&gt; 1 accuracy binary         0.7  
+#&gt; 2 roc_auc  binary         0.429
 ```
 
 
@@ -647,16 +647,16 @@ glance(cls_fit)
 #&gt; # A tibble: 1 × 8
 #&gt;   null.deviance df.null logLik    AIC    BIC deviance df.residual  nobs
 #&gt;           &lt;dbl&gt;   &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;       &lt;int&gt; &lt;int&gt;
-#&gt; 1        12542.    9109 -6259. 12528. 12563.   12518.        9105  9110
+#&gt; 1        12544.    9109 -6261. 12532. 12567.   12522.        9105  9110
 tidy(cls_fit)
 #&gt; # A tibble: 5 × 5
 #&gt;   term                      estimate std.error statistic    p.value
 #&gt;   &lt;chr&gt;                        &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;
-#&gt; 1 (Intercept)               -0.0155    0.0454    -0.341  0.733     
-#&gt; 2 distance                  -0.00555   0.00125   -4.46   0.00000831
-#&gt; 3 strengtheven_short_handed 10.9     119.         0.0911 0.927     
-#&gt; 4 strengthpower_play        -0.758     0.592     -1.28   0.201     
-#&gt; 5 strengthshort_handed      -0.847     1.16      -0.733  0.464
+#&gt; 1 (Intercept)               -0.00938   0.0457     -0.205 0.837     
+#&gt; 2 distance                  -0.00565   0.00126    -4.50  0.00000690
+#&gt; 3 strengtheven_short_handed  0.262     1.42        0.185 0.853     
+#&gt; 4 strengthpower_play        -0.859     0.585      -1.47  0.142     
+#&gt; 5 strengthshort_handed      -0.468     1.23       -0.382 0.702
 ```
 
 ---
@@ -670,12 +670,12 @@ augment(cls_fit, shuffled_data %&gt;% select(distance, strength, on_goal))
 #&gt; # A tibble: 10 × 6
 #&gt;   distance strength on_goal .pred_class .pred_yes .pred_no
 #&gt;      &lt;dbl&gt; &lt;fct&gt;    &lt;fct&gt;   &lt;fct&gt;           &lt;dbl&gt;    &lt;dbl&gt;
-#&gt; 1    21.0  even     no      yes             0.533    0.467
-#&gt; 2    30.1  even     yes     yes             0.545    0.455
-#&gt; 3    20.1  even     no      yes             0.532    0.468
-#&gt; 4    15.3  even     yes     yes             0.525    0.475
-#&gt; 5     9.85 even     no      yes             0.518    0.482
-#&gt; 6    18.9  even     yes     yes             0.530    0.470
+#&gt; 1     81.8 even     no      yes             0.616    0.384
+#&gt; 2     32.8 even     yes     yes             0.548    0.452
+#&gt; 3     16.0 even     no      yes             0.525    0.475
+#&gt; 4     33.5 even     yes     yes             0.550    0.450
+#&gt; 5     38.0 even     yes     yes             0.556    0.444
+#&gt; 6     62.6 even     yes     yes             0.590    0.410
 #&gt; # … with 4 more rows
 ```
     </textarea>

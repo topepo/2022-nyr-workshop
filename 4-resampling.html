@@ -278,8 +278,8 @@ collect_metrics(nhl_glm_splines)
 #&gt; # A tibble: 2 × 6
 #&gt;   .metric  .estimator  mean     n std_err .config             
 #&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;               
-#&gt; 1 accuracy binary     0.616    10 0.00458 Preprocessor1_Model1
-#&gt; 2 roc_auc  binary     0.652    10 0.00440 Preprocessor1_Model1
+#&gt; 1 accuracy binary     0.626    10 0.00601 Preprocessor1_Model1
+#&gt; 2 roc_auc  binary     0.660    10 0.00706 Preprocessor1_Model1
 ```
 
 To get the holdout predictions: 
@@ -291,10 +291,10 @@ nhl_pred %&gt;% slice(1:4)
 #&gt; # A tibble: 4 × 7
 #&gt;   id     .pred_yes .pred_no  .row .pred_class on_goal .config             
 #&gt;   &lt;chr&gt;      &lt;dbl&gt;    &lt;dbl&gt; &lt;int&gt; &lt;fct&gt;       &lt;fct&gt;   &lt;chr&gt;               
-#&gt; 1 Fold01     0.652    0.348    14 yes         yes     Preprocessor1_Model1
-#&gt; 2 Fold01     0.838    0.162    45 yes         yes     Preprocessor1_Model1
-#&gt; 3 Fold01     0.803    0.197    50 yes         yes     Preprocessor1_Model1
-#&gt; 4 Fold01     0.756    0.244    96 yes         yes     Preprocessor1_Model1
+#&gt; 1 Fold01     0.711    0.289    14 yes         yes     Preprocessor1_Model1
+#&gt; 2 Fold01     0.569    0.431    45 yes         yes     Preprocessor1_Model1
+#&gt; 3 Fold01     0.318    0.682    50 no          yes     Preprocessor1_Model1
+#&gt; 4 Fold01     0.285    0.715    96 no          no      Preprocessor1_Model1
 ```
 
 
@@ -450,8 +450,8 @@ collect_metrics(nhl_lin_splines)
 #&gt; # A tibble: 2 × 6
 #&gt;   .metric  .estimator  mean     n std_err .config             
 #&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;               
-#&gt; 1 accuracy binary     0.579    10 0.00486 Preprocessor1_Model1
-#&gt; 2 roc_auc  binary     0.593    10 0.00484 Preprocessor1_Model1
+#&gt; 1 accuracy binary     0.584    10 0.00563 Preprocessor1_Model1
+#&gt; 2 roc_auc  binary     0.601    10 0.00401 Preprocessor1_Model1
 ```
 
 
