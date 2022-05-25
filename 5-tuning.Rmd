@@ -127,7 +127,7 @@ Some examples:
 
 * Activation function (e.g. sigmoidal, ReLu) in neural networks. 
 
-* Number of PCA components to retain
+* Number of PCA components to retain.
 
 ]
 .pull-right[
@@ -150,7 +150,7 @@ The main two classes of optimization models are:
  
  * _Iterative search_ methods suggest/estimate new values of candidate parameters to evaluate. 
 
-Once the value(s) of the parameter(s) are determined, a model can be finalized but fitting the model to the entire training set. 
+Once the value(s) of the parameter(s) are determined, a model can be finalized by fitting the model to the entire training set. 
 
 
 ---
@@ -723,9 +723,9 @@ test_res %>%
 There are a lot more things that tidymodels can do: 
 
 * Faster grid search using [racing methods](https://www.tmwr.org/grid-search.html#racing). 
-* [Iterative optimization](https://www.tmwr.org/iterative-search.html) tools
+* [Iterative optimization](https://www.tmwr.org/iterative-search.html) tools.
 * Creating a grid of preprocessors and model for [faster screening](https://www.tmwr.org/workflow-sets.html). 
-* [Deploying your model](https://vetiver.tidymodels.org/articles/vetiver.html) with vetiver
+* [Deploying your model](https://vetiver.tidymodels.org/articles/vetiver.html) with vetiver.
 
 
 

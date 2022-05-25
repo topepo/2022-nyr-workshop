@@ -147,11 +147,11 @@ knitr::include_graphics("images/the-model.svg")
 ---
 # What's the difference?
 
-It is easy to think that the model fit is the only estimation steps. 
+It is easy to think that the model fit is the only estimation step. 
 
 There are cases where this could go really wrong: 
 
-* Poor estimation of performance (buy treating the PCA parts as known)
+* Poor estimation of performance (by treating the PCA parts as known)
 
 * Selection bias in feature selection
 
@@ -210,7 +210,7 @@ From a non-statistical perspective, many consumers of complex models emphasize t
 
 # Large data sets
 
-When a large amount of data are available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure. 
+When a large amount of data is available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure. 
 
 Alternatively, it is probably a better idea to reserve good percentages of the data for specific parts of the modeling process. For example: 
 
@@ -269,7 +269,7 @@ class: inverse, middle, center
 
 # Specifying models in R using formulas
 
-To fit a model to the housing data, the model terms must be specified. Historically, there are two main interfaces for doing this. 
+To fit a model to the hockey data, the model terms must be specified. Historically, there are two main interfaces for doing this. 
 
 The **formula** interface using R [formula rules](https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Formulae-for-statistical-models) to specify a _symbolic_ representation of the terms:
 
@@ -364,7 +364,7 @@ class: inverse, middle, center
   - `r pkg(stan)` for Bayesian regression
   - `r pkg(keras)` for regression using tensorflow
   
-- But...remember the consistency slide?
+- But...remember the consistency issue?
 
   - Each interface has its own minutiae to remember
   - `r pkg(parsnip)` standardizes all that!
@@ -456,7 +456,7 @@ When there are special effects (e.g. splines), dummy variables, interactions, or
 
 In cases where there are a lot of _predictors_, these computations can consume a lot of resources. If we can save them, that would be helpful. 
 
-The answer is a _workflow_ object. These bundle together a preprocessor (such as a formula) along with a model. 
+The answer is a _workflow_ object. This bundles together a preprocessor (such as a formula) along with a model. 
 
 
 ---

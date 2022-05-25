@@ -100,8 +100,8 @@ The best way to get started with tidymodels is to use the `r pkg(tidymodels)` me
 Some helpful links:
 
  * List of [all tidymodels functions](https://www.tidymodels.org/find/#search-all-of-tidymodels)
- * List of [all parsnip models](https://www.tidymodels.org/find/parsnip/)
- * List of [all recipe steps](https://www.tidymodels.org/find/recipes/)
+ * List of [all models](https://www.tidymodels.org/find/parsnip/)
+ * List of [all preprocessing steps](https://www.tidymodels.org/find/recipes/)
 
 
 ---
@@ -200,7 +200,9 @@ We'll use some sports data to demonstrate classification models.
 
 The data are in the ongoal package at [`topepo/ongoal`](https://github.com/topepo/ongoal).
 
-The outcome is a factor of whether a shot was on-goal or not. Predictors:
+The outcome is a factor of whether a shot was on-goal or not. 
+
+Predictors:
 
 * Game related: type of game, power-play data, etc.
 * Player: who, position, team
