@@ -47,17 +47,17 @@ class: inverse, middle, center
 ---
 # What is feature engineering?
 
-First thing's first: what's a feature? 
+First thing's first: what's a feature?
 
-I tend to think of a feature as some representation of a predictor that will be used in a model. 
+I tend to think of a feature as some representation of a predictor that will be used in a model.
 
-Old-school features: 
+Old-school features:
 
  * Interactions
  * Polynomial expansions/splines
  * PCA feature extraction
- 
-"Feature engineering" sounds pretty cool, but let's take a minute to talk about _preprocessing_ data.  
+
+"Feature engineering" sounds pretty cool, but let's take a minute to talk about _preprocessing_ data.
 
 ---
 # Two types of preprocessing
@@ -75,11 +75,11 @@ Old-school features:
 
 For example, centering and scaling are definitely not feature engineering.
 
-Consider the `date` field in the data. If given as a raw predictor, it is converted to an integer. 
+Consider the `date` field in the data. If given as a raw predictor, it is converted to an integer.
 
 It can be re-encoded as:
 
-* Days since a reference date 
+* Days since a reference date
 * Day of the week
 * Month
 * Year
@@ -104,19 +104,19 @@ It can be re-encoded as:
 ---
 # General definitions
 
-* _Data preprocessing_ are the steps that you take to make your model successful. 
+* _Data preprocessing_ are the steps that you take to make your model successful.
 
-* _Feature engineering_ are what you do to the original predictors to make the model do the least work to predict the outcome as well as possible. 
+* _Feature engineering_ are what you do to the original predictors to make the model do the least work to predict the outcome as well as possible.
 
-We'll demonstrate the &lt;span class="pkg"&gt;recipes&lt;/span&gt; package for all of your data needs. 
+We'll demonstrate the &lt;span class="pkg"&gt;recipes&lt;/span&gt; package for all of your data needs.
 
 ---
 # Recipes prepare your data for modeling
 
-The package is extensible framework for pipeable sequences of feature engineering steps provides preprocessing tools to be applied to data. 
-    
-Statistical parameters for the steps can be estimated from an initial data set and then applied to other data sets. 
-    
+The package is extensible framework for pipeable sequences of feature engineering steps provides preprocessing tools to be applied to data.
+
+Statistical parameters for the steps can be estimated from an initial data set and then applied to other data sets.
+
 The resulting processed output can then be used as inputs for statistical or machine learning models.
 
 ---
@@ -124,7 +124,7 @@ The resulting processed output can then be used as inputs for statistical or mac
 
 
 ```r
-nhl_rec &lt;- 
+nhl_rec &lt;-
   recipe(on_goal ~ ., data = nhl_train)
 
 # If ncol(data) is large, you can use
@@ -137,8 +137,8 @@ Based on the formula, the function assigns columns to roles of "outcome" or "pre
 ```r
 summary(nhl_rec)
 #&gt; # A tibble: 22 × 4
-#&gt;   variable    type    role      source  
-#&gt;   &lt;chr&gt;       &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
+#&gt;   variable    type    role      source
+#&gt;   &lt;chr&gt;       &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;
 #&gt; 1 date_time   date    predictor original
 #&gt; 2 period      numeric predictor original
 #&gt; 3 period_type nominal predictor original
@@ -154,25 +154,25 @@ summary(nhl_rec)
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
 * step_date(date_time, features = c("dow", "month", "year"))
 ```
 
-This creates three new columns in the data based on the date. Now that the day-of-the-week column is a factor.
+This creates three new columns in the data based on the date. Note that the day-of-the-week column is a factor.
 
 ---
 # A first recipe - work with dates &lt;img src="images/recipes.svg" class="title-hex"&gt;
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
 * step_holiday(date_time)
 ```
 
-Add indicators for major holidays. Specific holidays, especially those ex-US, can also be generated. 
+Add indicators for major holidays. Specific holidays, especially those ex-US, can also be generated.
 
 
 
@@ -181,31 +181,31 @@ Add indicators for major holidays. Specific holidays, especially those ex-US, ca
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
 * step_rm(date_time)
 ```
 
-At this point, we don't need `date` anymore. We'll just delete it form the data but there are ways to change its role to an arbitrary value.  
+At this point, we don't need `date` anymore. We'll just delete it form the data but there are ways to change its role to an arbitrary value.
 
 ---
 # A first recipe -create indicator variables &lt;img src="images/recipes.svg" class="title-hex"&gt;
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
 * step_dummy(all_nominal_predictors())
 ```
 
-For any factor or character predictors, make binary indicators. 
+For any factor or character predictors, make binary indicators.
 
-There are _many_ recipe steps that can convert categorical predictors to numeric columns. 
+There are _many_ recipe steps that can convert categorical predictors to numeric columns.
 
 
 ---
@@ -213,12 +213,12 @@ There are _many_ recipe steps that can convert categorical predictors to numeric
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
-  step_dummy(all_nominal_predictors()) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
 * step_zv(all_predictors())
 ```
 
@@ -232,21 +232,21 @@ Note that the selector chooses all columns with a role of "predictor"
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
-  step_dummy(all_nominal_predictors()) %&gt;% 
-  step_zv(all_predictors()) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
 * step_normalize(all_numeric_predictors())
 ```
 
-This centers and scales the numeric predictors. 
+This centers and scales the numeric predictors.
 
-Note that this will use the training set to estimate the means and standard deviations of the data. 
+Note that this will use the training set to estimate the means and standard deviations of the data.
 
-All data put through the recipe will be normalized using those statistics (there is no re-estimation). 
+All data put through the recipe will be normalized using those statistics (there is no re-estimation).
 
 
 
@@ -255,34 +255,34 @@ All data put through the recipe will be normalized using those statistics (there
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
-  step_dummy(all_nominal_predictors()) %&gt;% 
-  step_zv(all_predictors()) %&gt;% 
-  step_normalize(all_numeric_predictors()) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
+  step_normalize(all_numeric_predictors()) %&gt;%
 * step_corr(all_numeric_predictors(), threshold = 0.9)
 ```
 
 To deal with highly correlated predictors, find the minimum predictor set to remove to make the pairwise correlations are less than 0.9.
 
-There are other filter steps too, 
+There are other filter steps too,
 
 ---
 # Other possible steps &lt;img src="images/recipes.svg" class="title-hex"&gt;
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
-  step_dummy(all_nominal_predictors()) %&gt;% 
-  step_zv(all_predictors()) %&gt;% 
-  step_normalize(all_numeric_predictors()) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
+  step_normalize(all_numeric_predictors()) %&gt;%
 * step_pca(all_numeric_predictors())
 ```
 
@@ -294,14 +294,14 @@ PCA feature extraction...
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
-  step_dummy(all_nominal_predictors()) %&gt;% 
-  step_zv(all_predictors()) %&gt;% 
-  step_normalize(all_numeric_predictors()) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
+  step_normalize(all_numeric_predictors()) %&gt;%
 * step_umap(all_numeric_predictors(), outcome = on_goal)
 ```
 
@@ -313,28 +313,28 @@ A fancy machine learning supervised dimension reduction technique
 
 
 ```r
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
-  step_dummy(all_nominal_predictors()) %&gt;% 
-  step_zv(all_predictors()) %&gt;% 
-  step_normalize(all_numeric_predictors()) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
+  step_normalize(all_numeric_predictors()) %&gt;%
 * step_ns(angle, deg_free = 10)
 ```
 
-Nonlinear transforms like _natural splines_ and so on. 
+Nonlinear transforms like _natural splines_ and so on.
 
 ---
-# What do we do with the player data? 
+# What do we do with the player data?
 
-There are 618 unique player values in our training set. 
+There are 618 unique player values in our training set.
 
  * We _could_ make the full set of indicator variables...
  * Or using [feature hashing](https://www.tmwr.org/categorical.html#feature-hashing) to make a subset.
- 
-Instead, we will using effect encoding to replace the `player` column with the estimated effect of that predictor. 
+
+Instead, we will using effect encoding to replace the `player` column with the estimated effect of that predictor.
 
 ---
 # Per-player statistics
@@ -345,11 +345,11 @@ Instead, we will using effect encoding to replace the `player` column with the e
 
 ]
 .pull-right[
-There are good statistical methods for estimating these rates that use _partial pooling_. 
+There are good statistical methods for estimating these rates that use _partial pooling_.
 
-This borrows strength across players and shrinks extreme values (e.g. zero or one) towards the mean for players with very few shots. 
+This borrows strength across players and shrinks extreme values (e.g. zero or one) towards the mean for players with very few shots.
 
-The embed package has recipes steps for effect encodings. 
+The embed package has recipes steps for effect encodings.
 
 ]
 
@@ -367,35 +367,35 @@ The embed package has recipes steps for effect encodings.
 ```r
 library(embed)
 
-nhl_rec &lt;- 
-  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
-  step_holiday(date_time) %&gt;% 
-  step_rm(date_time) %&gt;% 
+nhl_rec &lt;-
+  recipe(on_goal ~ ., data = nhl_train) %&gt;%
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
+  step_holiday(date_time) %&gt;%
+  step_rm(date_time) %&gt;%
 * step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
-  step_dummy(all_nominal_predictors()) %&gt;% 
-  step_zv(all_predictors()) %&gt;% 
-  step_ns(angle, deg_free = 10) %&gt;% 
-  step_ns(distance, deg_free = 10) %&gt;% 
-  step_normalize(all_numeric_predictors()) 
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
+  step_ns(angle, deg_free = 10) %&gt;%
+  step_ns(distance, deg_free = 10) %&gt;%
+  step_normalize(all_numeric_predictors())
 ```
 
-It is very important to appropriately validated the effect encoding step to make sure that we are not overfitting. 
+It is very important to appropriately validated the effect encoding step to make sure that we are not overfitting.
 
 ---
 # Recipes are estimated
 
-_Every_ preprocessing step in a recipe that involved calculations uses the _training set_. For example: 
+_Every_ preprocessing step in a recipe that involved calculations uses the _training set_. For example:
 
  * Levels of a factor
  * Determination of zero-variance
  * Normalization
  * Feature extraction
  * Effect encodings
- 
-and so on. 
 
-Once a a recipe is added to a workflow, this occurs when `fit()` is called. 
+and so on.
+
+Once a a recipe is added to a workflow, this occurs when `fit()` is called.
 
 
 ---
@@ -412,21 +412,21 @@ Let's stick to a linear model for now and add a recipe (instead of a formula):
 
 
 ```r
-glm_spec &lt;- logistic_reg() 
+glm_spec &lt;- logistic_reg()
 
-nhl_wflow &lt;- 
-  workflow() %&gt;% 
-  add_model(glm_spec) %&gt;% 
+nhl_wflow &lt;-
+  workflow() %&gt;%
+  add_model(glm_spec) %&gt;%
   add_recipe(nhl_rec)
 
 nhl_wflow
 #&gt; ══ Workflow ═════════════════════════════════════════════════════════════════════════
 #&gt; Preprocessor: Recipe
 #&gt; Model: logistic_reg()
-#&gt; 
+#&gt;
 #&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
 #&gt; 9 Recipe Steps
-#&gt; 
+#&gt;
 #&gt; • step_date()
 #&gt; • step_holiday()
 #&gt; • step_rm()
@@ -436,10 +436,10 @@ nhl_wflow
 #&gt; • step_ns()
 #&gt; • step_ns()
 #&gt; • step_normalize()
-#&gt; 
+#&gt;
 #&gt; ── Model ────────────────────────────────────────────────────────────────────────────
 #&gt; Logistic Regression Model Specification (classification)
-#&gt; 
+#&gt;
 #&gt; Computational engine: glm
 ```
 
@@ -459,10 +459,10 @@ nhl_fit
 #&gt; ══ Workflow [trained] ═══════════════════════════════════════════════════════════════
 #&gt; Preprocessor: Recipe
 #&gt; Model: logistic_reg()
-#&gt; 
+#&gt;
 #&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
 #&gt; 9 Recipe Steps
-#&gt; 
+#&gt;
 #&gt; • step_date()
 #&gt; • step_holiday()
 #&gt; • step_rm()
@@ -472,59 +472,59 @@ nhl_fit
 #&gt; • step_ns()
 #&gt; • step_ns()
 #&gt; • step_normalize()
-#&gt; 
+#&gt;
 #&gt; ── Model ────────────────────────────────────────────────────────────────────────────
-#&gt; 
+#&gt;
 #&gt; Call:  stats::glm(formula = ..y ~ ., family = stats::binomial, data = data)
-#&gt; 
+#&gt;
 #&gt; Coefficients:
-#&gt;                (Intercept)                      period                     coord_x  
-#&gt;                  -0.224572                    0.018814                    0.013178  
-#&gt;                    coord_y                   game_time                      player  
-#&gt;                  -0.022486                    0.065183                   -0.445195  
-#&gt;              offense_goals               defense_goals                 player_diff  
-#&gt;                  -0.051041                   -0.151670                    0.047803  
-#&gt;           behind_goal_line                        year              date_time_year  
-#&gt;                   0.014560                    0.033259                          NA  
-#&gt;         date_time_LaborDay       date_time_NewYearsDay         period_type_regular  
-#&gt;                   0.000688                    0.004971                    0.080099  
-#&gt; strength_even_short_handed         strength_power_play       strength_short_handed  
-#&gt;                   0.023537                   -0.089361                          NA  
-#&gt;           offense_team_ARI            offense_team_BOS            offense_team_BUF  
-#&gt;                   0.024604                    0.044756                    0.106689  
-#&gt;           offense_team_CAR            offense_team_CBJ            offense_team_CGY  
-#&gt;                   0.091049                    0.039150                    0.089958  
-#&gt;           offense_team_CHI            offense_team_COL            offense_team_DAL  
-#&gt;                   0.024835                    0.076285                    0.086634  
-#&gt;           offense_team_DET            offense_team_EDM            offense_team_FLA  
-#&gt;                   0.046268                    0.073401                    0.020081  
-#&gt;           offense_team_LAK            offense_team_MIN            offense_team_MTL  
-#&gt;                   0.045713                    0.030004                    0.043533  
-#&gt;           offense_team_NJD            offense_team_NSH            offense_team_NYI  
-#&gt;                   0.047068                    0.028561                    0.073172  
-#&gt;           offense_team_NYR            offense_team_OTT            offense_team_PHI  
-#&gt;                   0.138083                    0.079873                    0.112620  
-#&gt;           offense_team_PIT            offense_team_SJS            offense_team_STL  
-#&gt;                   0.210440                    0.107674                    0.067963  
-#&gt;           offense_team_TBL            offense_team_TOR            offense_team_VAN  
-#&gt;                   0.059440                    0.070552                    0.041150  
-#&gt;           offense_team_WPG            offense_team_WSH            defence_team_ARI  
-#&gt;                   0.051747                    0.124667                    0.020182  
-#&gt;           defence_team_BOS            defence_team_BUF            defence_team_CAR  
-#&gt;                   0.029064                   -0.016739                    0.002205  
-#&gt;           defence_team_CBJ            defence_team_CGY            defence_team_CHI  
-#&gt;                   0.027262                    0.009870                    0.022186  
-#&gt;           defence_team_COL            defence_team_DAL            defence_team_DET  
-#&gt;                   0.055980                   -0.017798                   -0.005028  
-#&gt;           defence_team_EDM            defence_team_FLA            defence_team_LAK  
-#&gt;                   0.022007                   -0.025276                   -0.016538  
-#&gt;           defence_team_MIN            defence_team_MTL            defence_team_NJD  
-#&gt;                   0.006556                    0.008584                   -0.011414  
-#&gt;           defence_team_NSH            defence_team_NYI            defence_team_NYR  
-#&gt;                  -0.018512                   -0.033289                    0.009163  
-#&gt;           defence_team_OTT            defence_team_PHI            defence_team_PIT  
-#&gt;                   0.008221                    0.011260                          NA  
-#&gt; 
+#&gt;                (Intercept)                      period                     coord_x
+#&gt;                  -0.224572                    0.018814                    0.013178
+#&gt;                    coord_y                   game_time                      player
+#&gt;                  -0.022486                    0.065183                   -0.445195
+#&gt;              offense_goals               defense_goals                 player_diff
+#&gt;                  -0.051041                   -0.151670                    0.047803
+#&gt;           behind_goal_line                        year              date_time_year
+#&gt;                   0.014560                    0.033259                          NA
+#&gt;         date_time_LaborDay       date_time_NewYearsDay         period_type_regular
+#&gt;                   0.000688                    0.004971                    0.080099
+#&gt; strength_even_short_handed         strength_power_play       strength_short_handed
+#&gt;                   0.023537                   -0.089361                          NA
+#&gt;           offense_team_ARI            offense_team_BOS            offense_team_BUF
+#&gt;                   0.024604                    0.044756                    0.106689
+#&gt;           offense_team_CAR            offense_team_CBJ            offense_team_CGY
+#&gt;                   0.091049                    0.039150                    0.089958
+#&gt;           offense_team_CHI            offense_team_COL            offense_team_DAL
+#&gt;                   0.024835                    0.076285                    0.086634
+#&gt;           offense_team_DET            offense_team_EDM            offense_team_FLA
+#&gt;                   0.046268                    0.073401                    0.020081
+#&gt;           offense_team_LAK            offense_team_MIN            offense_team_MTL
+#&gt;                   0.045713                    0.030004                    0.043533
+#&gt;           offense_team_NJD            offense_team_NSH            offense_team_NYI
+#&gt;                   0.047068                    0.028561                    0.073172
+#&gt;           offense_team_NYR            offense_team_OTT            offense_team_PHI
+#&gt;                   0.138083                    0.079873                    0.112620
+#&gt;           offense_team_PIT            offense_team_SJS            offense_team_STL
+#&gt;                   0.210440                    0.107674                    0.067963
+#&gt;           offense_team_TBL            offense_team_TOR            offense_team_VAN
+#&gt;                   0.059440                    0.070552                    0.041150
+#&gt;           offense_team_WPG            offense_team_WSH            defence_team_ARI
+#&gt;                   0.051747                    0.124667                    0.020182
+#&gt;           defence_team_BOS            defence_team_BUF            defence_team_CAR
+#&gt;                   0.029064                   -0.016739                    0.002205
+#&gt;           defence_team_CBJ            defence_team_CGY            defence_team_CHI
+#&gt;                   0.027262                    0.009870                    0.022186
+#&gt;           defence_team_COL            defence_team_DAL            defence_team_DET
+#&gt;                   0.055980                   -0.017798                   -0.005028
+#&gt;           defence_team_EDM            defence_team_FLA            defence_team_LAK
+#&gt;                   0.022007                   -0.025276                   -0.016538
+#&gt;           defence_team_MIN            defence_team_MTL            defence_team_NJD
+#&gt;                   0.006556                    0.008584                   -0.011414
+#&gt;           defence_team_NSH            defence_team_NYI            defence_team_NYR
+#&gt;                  -0.018512                   -0.033289                    0.009163
+#&gt;           defence_team_OTT            defence_team_PHI            defence_team_PIT
+#&gt;                   0.008221                    0.011260                          NA
+#&gt;
 #&gt; ...
 #&gt; and 44 more lines.
 ```
@@ -541,17 +541,17 @@ When `predict()` is called, the fitted recipe is applied to the new data before 
 predict(nhl_fit, nhl_test)
 #&gt; # A tibble: 3,037 × 1
 #&gt;   .pred_class
-#&gt;   &lt;fct&gt;      
-#&gt; 1 no         
-#&gt; 2 no         
-#&gt; 3 no         
-#&gt; 4 no         
-#&gt; 5 no         
-#&gt; 6 no         
+#&gt;   &lt;fct&gt;
+#&gt; 1 no
+#&gt; 2 no
+#&gt; 3 no
+#&gt; 4 no
+#&gt; 5 no
+#&gt; 6 no
 #&gt; # … with 3,031 more rows
 ```
 
-You don't need to do anything else
+You don't need to do anything else.
 
 
 ---
@@ -563,18 +563,18 @@ You don't need to do anything else
 ```r
 tidy(nhl_rec)
 #&gt; # A tibble: 9 × 6
-#&gt;   number operation type          trained skip  id                 
-#&gt;    &lt;int&gt; &lt;chr&gt;     &lt;chr&gt;         &lt;lgl&gt;   &lt;lgl&gt; &lt;chr&gt;              
-#&gt; 1      1 step      date          FALSE   FALSE date_5JYHV         
-#&gt; 2      2 step      holiday       FALSE   FALSE holiday_OI1rx      
-#&gt; 3      3 step      rm            FALSE   FALSE rm_G4hTH           
+#&gt;   number operation type          trained skip  id
+#&gt;    &lt;int&gt; &lt;chr&gt;     &lt;chr&gt;         &lt;lgl&gt;   &lt;lgl&gt; &lt;chr&gt;
+#&gt; 1      1 step      date          FALSE   FALSE date_5JYHV
+#&gt; 2      2 step      holiday       FALSE   FALSE holiday_OI1rx
+#&gt; 3      3 step      rm            FALSE   FALSE rm_G4hTH
 #&gt; 4      4 step      lencode_mixed FALSE   FALSE lencode_mixed_SvrVF
-#&gt; 5      5 step      dummy         FALSE   FALSE dummy_MxKEo        
-#&gt; 6      6 step      zv            FALSE   FALSE zv_GKLuK           
+#&gt; 5      5 step      dummy         FALSE   FALSE dummy_MxKEo
+#&gt; 6      6 step      zv            FALSE   FALSE zv_GKLuK
 #&gt; # … with 3 more rows
 ```
 
-After fitting the recipe, you might want access to the statistics from each step. We can pull the fitted recipe from the workflow and choose which step to tidy by number or `id`
+After fitting the recipe, you might want access to the statistics from each step. We can pull the fitted recipe from the workflow and choose which step to tidy by number or `id`.
 
 ---
 # Tidying a recipe &lt;img src="images/broom.svg" class="title-hex"&gt;
@@ -582,12 +582,12 @@ After fitting the recipe, you might want access to the statistics from each step
 
 
 ```r
-nhl_fit %&gt;% 
-  extract_recipe() %&gt;% 
+nhl_fit %&gt;%
+  extract_recipe() %&gt;%
   tidy(number = 4) # For per-player estimates
 #&gt; # A tibble: 619 × 4
-#&gt;   level            value terms  id                 
-#&gt;   &lt;chr&gt;            &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;              
+#&gt;   level            value terms  id
+#&gt;   &lt;chr&gt;            &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;
 #&gt; 1 aaron_ekblad    0.226  player lencode_mixed_SvrVF
 #&gt; 2 adam_clendening 0.0961 player lencode_mixed_SvrVF
 #&gt; 3 adam_cracknell  0.266  player lencode_mixed_SvrVF
@@ -600,27 +600,27 @@ nhl_fit %&gt;%
 ---
 # Debugging a recipe
 
-90% of the time, you will want to use a workflow to estimate and apply a recipe. 
+90% of the time, you will want to use a workflow to estimate and apply a recipe.
 
-If you have an error, the original recipe object (e.g. `nhl_rec`) can be estimated manually with a function called `bake()` (analogous to `fit()`). 
+If you have an error, the original recipe object (e.g. `nhl_rec`) can be estimated manually with a function called `bake()` (analogous to `fit()`).
 
-This returns the fitted recipe. This can help debug any issues. 
+This returns the fitted recipe. This can help debug any issues.
 
-Another function (`bake()`) is analogous to `predict()` and gives you the processed data back. 
+Another function (`bake()`) is analogous to `predict()` and gives you the processed data back.
 
 
 ---
 # Fun facts about recipes
 
-* Once `fit()` is called on a workflow, changing the model does not re-fit the recipe. 
-* A list of all known steps is [here](https://www.tidymodels.org/find/recipes/). 
-* Some steps can be [skipped](https://recipes.tidymodels.org/articles/Skipping.html) when using `predict()`. 
-* The [order](https://recipes.tidymodels.org/articles/Ordering.html) of the steps matters. 
-* There are &lt;span class="pkg"&gt;recipes&lt;/span&gt;-adjacent packages with more steps: &lt;span class="pkg"&gt;embed&lt;/span&gt;, &lt;span class="pkg"&gt;timetk&lt;/span&gt;, &lt;span class="pkg"&gt;textrecipes&lt;/span&gt;, and others. 
+* Once `fit()` is called on a workflow, changing the model does not re-fit the recipe.
+* A list of all known steps is [here](https://www.tidymodels.org/find/recipes/).
+* Some steps can be [skipped](https://recipes.tidymodels.org/articles/Skipping.html) when using `predict()`.
+* The [order](https://recipes.tidymodels.org/articles/Ordering.html) of the steps matters.
+* There are &lt;span class="pkg"&gt;recipes&lt;/span&gt;-adjacent packages with more steps: &lt;span class="pkg"&gt;embed&lt;/span&gt;, &lt;span class="pkg"&gt;timetk&lt;/span&gt;, &lt;span class="pkg"&gt;textrecipes&lt;/span&gt;, and others.
   * If you do any text processing, &lt;span class="pkg"&gt;textrecipes&lt;/span&gt; is 🆒&lt;sup&gt;♾️&lt;/sup&gt;.
     * Julia and Emil have written an amazing text processing book: [_Supervised Machine Learning for Text Analysis in R_](https://smltar.com/)
-* There are a lot of ways to handle [categorical predictors](https://recipes.tidymodels.org/articles/Dummies.html) even those with novel levels. 
-* Several &lt;span class="pkg"&gt;dplyr&lt;/span&gt; steps exist, such as `step_mutate()`. 
+* There are a lot of ways to handle [categorical predictors](https://recipes.tidymodels.org/articles/Dummies.html), even those with novel levels.
+* Several &lt;span class="pkg"&gt;dplyr&lt;/span&gt; steps exist, such as `step_mutate()`.
 
 
 

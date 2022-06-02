@@ -39,11 +39,11 @@ background-color: #F9F8F3
 ---
 # Our goals for this workshop
 
-* Introduce tidymodels and its general philosophy on modeling. 
+* Introduce tidymodels and its general philosophy on modeling.
 
-* Help you become proficient with the core packages for modeling. 
+* Help you become proficient with the core packages for modeling.
 
-* Point you to places to learn more and get help. 
+* Point you to places to learn more and get help.
 
 ---
 # Why tidymodels?
@@ -51,19 +51,19 @@ background-color: #F9F8F3
 There are several other modeling frameworks in R that try to:
 
  * create a uniform, cohesive, and unsurprising set of modeling APIs
- 
-Examples are &lt;span class="pkg"&gt;caret&lt;/span&gt;, &lt;span class="pkg"&gt;mlr3&lt;/span&gt;, and others. 
+
+Examples are &lt;span class="pkg"&gt;caret&lt;/span&gt;, &lt;span class="pkg"&gt;mlr3&lt;/span&gt;, and others.
 
 * &lt;span class="pkg"&gt;caret&lt;/span&gt; is more favorable for people who prefer base R/traditional interfaces.
 
-* tidymodels would probably be preferable to those who place importance on a tidy _R_ interface, a large number of features, and the idea that the interfaces should enable the "pit of success". 
+* tidymodels would probably be preferable to those who place importance on a tidy _R_ interface, a large number of features, and the idea that the interfaces should enable the "pit of success".
 
 * &lt;span class="pkg"&gt;mlr3&lt;/span&gt; is more pythonic and also has many features.
 
 ---
 # The tidymodels package
 
-There are a lot of tidymodels packages but about 90% of the work is done by 5 packages. 
+There are a lot of tidymodels packages but about 90% of the work is done by 5 packages.
 
 The best way to get started with tidymodels is to use the &lt;span class="pkg"&gt;tidymodels&lt;/span&gt; meta-package. It loads the core packages plus some tidyverse packages.
 
@@ -143,7 +143,7 @@ mtcars[, "mpg"]  # a vector
 num_args &lt;- function(x) length(formals(x))
 
 
-num_args(caret::trainControl) + 
+num_args(caret::trainControl) +
   num_args(caret:::train.default)
 
 ```
@@ -156,22 +156,22 @@ num_args(caret::trainControl) +
 tidyverse/tidymodels
 
 ```r
-mtcars %&gt;% 
-  arrange(cyl) %&gt;% 
+mtcars %&gt;%
+  arrange(cyl) %&gt;%
   select(mpg)
 
 # ──────────────────────────────────────────────
 
 tb_cars &lt;- as_tibble(mtcars)
 tb_cars$mp        # fails
-tb_cars[, "mpg"]  # A tibble 
+tb_cars[, "mpg"]  # A tibble
 
 # ──────────────────────────────────────────────
 
 
 
-num_args(linear_reg) + num_args(set_engine) + 
-  num_args(tune_grid) + num_args(control_grid) + 
+num_args(linear_reg) + num_args(set_engine) +
+  num_args(tune_grid) + num_args(control_grid) +
   num_args(vfold_cv)
 
 ```
@@ -184,17 +184,19 @@ num_args(linear_reg) + num_args(set_engine) +
 ---
 # Example data set
 
-We'll use some sports data to demonstrate classification models. 
+We'll use some sports data to demonstrate classification models.
 
 The data are in the ongoal package at [`topepo/ongoal`](https://github.com/topepo/ongoal).
 
-The outcome is a factor of whether a shot was on-goal or not. Predictors:
+The outcome is a factor of whether a shot was on-goal or not.
+
+Predictors:
 
 * Game related: type of game, power-play data, etc.
 * Player: who, position, team
 * Shot: where, when
 
-We'll use data from the 2015-2016 season. 
+We'll use data from the 2015-2016 season.
 
 ---
 
@@ -206,8 +208,8 @@ library(ongoal)
 # source("_common.R")
 set.seed(1)
 on_goal %&gt;%
-  filter(season == "20152016") %&gt;% 
-  sample_n(500) %&gt;% 
+  filter(season == "20152016") %&gt;%
+  sample_n(500) %&gt;%
   plot_rink(alpha = 3/4, cex = 2)
 ```
 
@@ -224,8 +226,8 @@ on_goal %&gt;%
 # Change the grouping variable
 set.seed(1)
 on_goal %&gt;%
-  filter(season == "20152016" &amp; distance &gt; 32) %&gt;% 
-  sample_n(500) %&gt;% 
+  filter(season == "20152016" &amp; distance &gt; 32) %&gt;%
+  sample_n(500) %&gt;%
   plot_rink(position, alpha = 3/4, cex = 2)
 ```
 
@@ -236,7 +238,7 @@ on_goal %&gt;%
 
 # Hands-On: Explore the Data
 
-Take a look at these data for a few minutes and see if you can find any interesting characteristics in the predictors or the outcome.  
+Take a look at these data for a few minutes and see if you can find any interesting characteristics in the predictors or the outcome.
 
 <div class="countdown" id="timer_628d60c5" style="bottom:0;left:1;" data-warnwhen="0">
 <code class="countdown-time"><span class="countdown-digits minutes">10</span><span class="countdown-digits colon">:</span><span class="countdown-digits seconds">00</span></code>

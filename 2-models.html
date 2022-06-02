@@ -44,19 +44,19 @@ class: inverse, middle, center
 # _Tidy Modeling with R_ ([`tmwr.org`](https://www.tmwr.org/))
 
 ---
-# Define the score of "The Model" 
+# Define the score of "The Model"
 
 In tidymodels, there is the idea that a model-oriented data analysis consists of
 
- - a preprocessor, and 
+ - a preprocessor, and
  - a model
- 
-The preprocessor might be a simple formula or a sophisticated recipe.  
+
+The preprocessor might be a simple formula or a sophisticated recipe.
 
 It's important to consider both of these activities as part of the data analysis process.
 
  - Post-model activities should also be included there (e.g. calibration, cut-off optimization, etc.)
- - We don't have those implemented yet. 
+ - We don't have those implemented yet.
 
 
 ---
@@ -68,14 +68,14 @@ It's important to consider both of these activities as part of the data analysis
 ---
 # A relevant example
 
-Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data. 
+Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data.
 
  - AKA principal component regression
- 
+
 ---
 # A relevant example
 
-Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data. 
+Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data.
 
  - AKA ~~principal component regression~~ feature extraction
 
@@ -83,21 +83,21 @@ Let's say that we have some highly correlated predictors and we want to reduce t
 ---
 # A relevant example
 
-Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data. 
+Let's say that we have some highly correlated predictors and we want to reduce the correlation by first applying principal component analysis to the data.
 
  - AKA ~~principal component regression~~ feature extraction
 
-What do we consider the estimation part of this process? 
+What do we consider the estimation part of this process?
 
 
 ---
-# Is it this? 
+# Is it this?
 
 &lt;img src="images/faux-model.svg" width="70%" style="display: block; margin: auto;" /&gt;
 
 
 ---
-# Or is it this? 
+# Or is it this?
 
 &lt;img src="images/the-model.svg" width="70%" style="display: block; margin: auto;" /&gt;
 
@@ -105,17 +105,17 @@ What do we consider the estimation part of this process?
 ---
 # What's the difference?
 
-It is easy to think that the model fit is the only estimation steps. 
+It is easy to think that the model fit is the only estimation step.
 
-There are cases where this could go really wrong: 
+There are cases where this could go really wrong:
 
-* Poor estimation of performance (buy treating the PCA parts as known)
+* Poor estimation of performance (by treating the PCA parts as known)
 
 * Selection bias in feature selection
 
 * Information leakage
 
-These problems are exacerbated as the preprocessors increase in complexity and/or effectiveness. 
+These problems are exacerbated as the preprocessors increase in complexity and/or effectiveness.
 
 _We'll come back to this at the end of this section_
 
@@ -138,20 +138,20 @@ background-color: #FFFFFF
 
 # Data splitting and spending
 
-How do we "spend" the data to find an optimal model? 
+How do we "spend" the data to find an optimal model?
 
 We _typically_ split data into training and test data sets:
 
 *  ***Training Set***: these data are used to estimate model parameters and to pick the values of the complexity parameter(s) for the model.
 
-*  ***Test Set***: these data can be used to get an independent assessment of model efficacy. **They should not be used during model training** (like, at all). 
+*  ***Test Set***: these data can be used to get an independent assessment of model efficacy. **They should not be used during model training** (like, at all).
 
 
 ---
 
-# Data splitting and spending 
+# Data splitting and spending
 
-The more data we spend, the better estimates we'll get (provided the data is accurate).  
+The more data we spend, the better estimates we'll get (provided the data is accurate).
 
 Given a fixed amount of data:
 
@@ -168,14 +168,14 @@ From a non-statistical perspective, many consumers of complex models emphasize t
 
 # Large data sets
 
-When a large amount of data are available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure. 
+When a large amount of data are available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure.
 
-Alternatively, it is probably a better idea to reserve good percentages of the data for specific parts of the modeling process. For example: 
+Alternatively, it is probably a better idea to reserve good percentages of the data for specific parts of the modeling process. For example:
 
 * Save a large chunk of data to perform feature selection prior to model building
-* Retain data to calibrate class probabilities or determine a cutoff via an ROC curve. 
+* Retain data to calibrate class probabilities or determine a cutoff via an ROC curve.
 
-Also, there may be little need for iterative resampling of the data. A single holdout (aka validation set) may be sufficient in some cases if the data are large enough and the data sampling mechanism is solid.  
+Also, there may be little need for iterative resampling of the data. A single holdout (aka validation set) may be sufficient in some cases if the data are large enough and the data sampling mechanism is solid.
 
 
 ---
@@ -190,7 +190,7 @@ For stratification:
 
 * **regression**: determine the quartiles of the data set and sample within those artificial groups
 
-For _time series_, we often use the most recent data as the test set. 
+For _time series_, we often use the most recent data as the test set.
 
 ---
 
@@ -216,7 +216,7 @@ nhl_train &lt;- training(nhl_split)
 nhl_test  &lt;- testing(nhl_split)
 
 c(training = nrow(nhl_train), testing = nrow(nhl_test))
-#&gt; training  testing 
+#&gt; training  testing
 #&gt;     9110     3037
 ```
 
@@ -232,7 +232,7 @@ class: inverse, middle, center
 
 # Specifying models in R using formulas
 
-To fit a model to the housing data, the model terms must be specified. Historically, there are two main interfaces for doing this. 
+To fit a model to the hockey data, the model terms must be specified. Historically, there are two main interfaces for doing this.
 
 The **formula** interface using R [formula rules](https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Formulae-for-statistical-models) to specify a _symbolic_ representation of the terms:
 
@@ -263,15 +263,15 @@ model_fn(log10(on_goal) ~ ns(angle, df = 3) + ., data = nhl_train)
 
 * You can't nest in-line functions such as `model_fn(y ~ pca(scale(x1), scale(x2), scale(x3)), data = dat)`.
 
-* All the model matrix calculations happen at once and can't be recycled when used in a model function. 
+* All the model matrix calculations happen at once and can't be recycled when used in a model function.
 
-* For very _wide_ data sets, the formula method can be [extremely inefficient](https://rviews.rstudio.com/2017/03/01/the-r-formula-method-the-bad-parts/). 
+* For very _wide_ data sets, the formula method can be [extremely inefficient](https://rviews.rstudio.com/2017/03/01/the-r-formula-method-the-bad-parts/).
 
-* There are limited _roles_ that variables can take which has led to several re-implementations of formulas. 
+* There are limited _roles_ that variables can take which has led to several re-implementations of formulas.
 
 * Specifying multivariate outcomes is clunky and inelegant.
 
-* Not all modeling functions have a formula method (consistency!). 
+* Not all modeling functions have a formula method (consistency!).
 
 ---
 
@@ -287,15 +287,15 @@ model_fn(x = nhl_train[, pre_vars],
          y = nhl_train$on_goal)
 ```
 
-This is inconvenient if you have transformations, factor variables, interactions, or any other operations to apply to the data prior to modeling. 
+This is inconvenient if you have transformations, factor variables, interactions, or any other operations to apply to the data prior to modeling.
 
-Overall, it is difficult to predict if a package has one or both of these interfaces. For example, `lm` only has formulas. 
+Overall, it is difficult to predict if a package has one or both of these interfaces. For example, `lm` only has formulas.
 
-There is a **third interface**, using _recipes_ that will be discussed later that solves some of these issues. 
+There is a **third interface**, using _recipes_ that will be discussed later that solves some of these issues.
 
 ---
 
-# A linear regression model 
+# A linear regression model
 
 Let's start by fitting an ordinary linear regression model to the training set. You can choose the model terms for your model, but I will use a very simple model:
 
@@ -304,7 +304,7 @@ Let's start by fitting an ordinary linear regression model to the training set. 
 simple_glm &lt;- glm(on_goal ~ distance + strength, data = nhl_train, family = binomial())
 ```
 
-Before looking at coefficients, we should do some model checking to see if there is anything obviously wrong with the model. 
+Before looking at coefficients, we should do some model checking to see if there is anything obviously wrong with the model.
 
 To get the statistics on the individual data points, we will use the awesome `broom` package:
 
@@ -330,12 +330,12 @@ class: inverse, middle, center
 - A tidy unified _interface_ to models
 
 - `lm()` isn't the only way to perform linear regression
-  
+
   - &lt;span class="pkg"&gt;glmnet&lt;/span&gt; for regularized regression
   - &lt;span class="pkg"&gt;stan&lt;/span&gt; for Bayesian regression
   - &lt;span class="pkg"&gt;keras&lt;/span&gt; for regression using tensorflow
-  
-- But...remember the consistency slide?
+
+- But...remember the consistency issue?
 
   - Each interface has its own minutiae to remember
   - &lt;span class="pkg"&gt;parsnip&lt;/span&gt; standardizes all that!
@@ -346,7 +346,7 @@ class: inverse, middle, center
 
 ]
 
-  
+
 ---
 
 # parsnip in action &lt;img src="images/parsnip.svg" class="title-hex"&gt;
@@ -364,13 +364,13 @@ class: inverse, middle, center
 spec_log_reg &lt;- logistic_reg()
 spec_log_reg
 #&gt; Logistic Regression Model Specification (classification)
-#&gt; 
+#&gt;
 #&gt; Computational engine: glm
 
 spec_glm &lt;- spec_log_reg %&gt;% set_engine("glm")
 spec_glm
 #&gt; Logistic Regression Model Specification (classification)
-#&gt; 
+#&gt;
 #&gt; Computational engine: glm
 ```
 
@@ -388,23 +388,23 @@ fit_lm &lt;- fit(
 
 fit_lm
 #&gt; parsnip model object
-#&gt; 
-#&gt; 
-#&gt; Call:  stats::glm(formula = on_goal ~ distance + strength, family = stats::binomial, 
+#&gt;
+#&gt;
+#&gt; Call:  stats::glm(formula = on_goal ~ distance + strength, family = stats::binomial,
 #&gt;     data = data)
-#&gt; 
+#&gt;
 #&gt; Coefficients:
-#&gt;               (Intercept)                   distance  strengtheven_short_handed  
-#&gt;                  -0.00938                   -0.00565                    0.26224  
-#&gt;        strengthpower_play       strengthshort_handed  
-#&gt;                  -0.85928                   -0.46826  
-#&gt; 
+#&gt;               (Intercept)                   distance  strengtheven_short_handed
+#&gt;                  -0.00938                   -0.00565                    0.26224
+#&gt;        strengthpower_play       strengthshort_handed
+#&gt;                  -0.85928                   -0.46826
+#&gt;
 #&gt; Degrees of Freedom: 9109 Total (i.e. Null);  9105 Residual
-#&gt; Null Deviance:	    12500 
+#&gt; Null Deviance:	    12500
 #&gt; Residual Deviance: 12500 	AIC: 12500
 ```
 
-Note: Models have default engines. We don't really need to use `set_engine("glm")` for this example. 
+Note: Models have default engines. We don't really need to use `set_engine("glm")` for this example.
 
 
 ]
@@ -419,9 +419,9 @@ same model with alternative backends.
 
 
 ```r
-spec_stan &lt;- 
+spec_stan &lt;-
   spec_log_reg %&gt;%
-  # Engine specific arguments are 
+  # Engine specific arguments are
   # passed through here
   set_engine("stan", chains = 4, iter = 5000, seed = 1)
 
@@ -431,17 +431,17 @@ fit_stan &lt;- fit(
   on_goal ~ distance + strength,
   data = nhl_train
 )
- 
+
 coef(fit_stan$fit)
-#&gt;               (Intercept)                  distance strengtheven_short_handed 
-#&gt;                 -0.015440                 -0.005557                164.037826 
-#&gt;        strengthpower_play      strengthshort_handed 
+#&gt;               (Intercept)                  distance strengtheven_short_handed
+#&gt;                 -0.015440                 -0.005557                164.037826
+#&gt;        strengthpower_play      strengthshort_handed
 #&gt;                 -0.803264                 -1.093221
 
 coef(fit_lm$fit)
-#&gt;               (Intercept)                  distance strengtheven_short_handed 
-#&gt;                  -0.01548                  -0.00555                  10.88236 
-#&gt;        strengthpower_play      strengthshort_handed 
+#&gt;               (Intercept)                  distance strengtheven_short_handed
+#&gt;                  -0.01548                  -0.00555                  10.88236
+#&gt;        strengthpower_play      strengthshort_handed
 #&gt;                  -0.75775                  -0.84678
 ```
 
@@ -449,15 +449,15 @@ coef(fit_lm$fit)
 ---
 # Duplicate computations
 
-Note that, for both of these fits, some of the computations are repeated. 
+Note that, for both of these fits, some of the computations are repeated.
 
-For example, the formula method does a fair amount of work to figure out how to turn the data frame into a matrix of predictors. 
+For example, the formula method does a fair amount of work to figure out how to turn the data frame into a matrix of predictors.
 
-When there are special effects (e.g. splines), dummy variables, interactions, or other components, the formula/terms objects have to keep track of everything. 
+When there are special effects (e.g. splines), dummy variables, interactions, or other components, the formula/terms objects have to keep track of everything.
 
-In cases where there are a lot of _predictors_, these computations can consume a lot of resources. If we can save them, that would be helpful. 
+In cases where there are a lot of _predictors_, these computations can consume a lot of resources. If we can save them, that would be helpful.
 
-The answer is a _workflow_ object. These bundle together a preprocessor (such as a formula) along with a model. 
+The answer is a _workflow_ object. This bundle together a preprocessor (such as a formula) along with a model.
 
 
 ---
@@ -467,9 +467,9 @@ We can _optionally_ bundle the recipe and model together into a &lt;span style="
 
 
 ```r
-cls_wflow &lt;- 
+cls_wflow &lt;-
   workflow() %&gt;%    # attached with the tidymodels package
-  add_model(spec_glm) %&gt;% 
+  add_model(spec_glm) %&gt;%
   add_formula(on_goal ~ distance + strength) # or add_recipe() or add_variables()
 
 cls_fit &lt;- fit(cls_wflow, data = nhl_train)
@@ -477,22 +477,22 @@ cls_fit
 #&gt; ══ Workflow [trained] ═══════════════════════════════════════════════════════════════
 #&gt; Preprocessor: Formula
 #&gt; Model: logistic_reg()
-#&gt; 
+#&gt;
 #&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
 #&gt; on_goal ~ distance + strength
-#&gt; 
+#&gt;
 #&gt; ── Model ────────────────────────────────────────────────────────────────────────────
-#&gt; 
+#&gt;
 #&gt; Call:  stats::glm(formula = ..y ~ ., family = stats::binomial, data = data)
-#&gt; 
+#&gt;
 #&gt; Coefficients:
-#&gt;               (Intercept)                   distance  strengtheven_short_handed  
-#&gt;                  -0.00938                   -0.00565                    0.26224  
-#&gt;        strengthpower_play       strengthshort_handed  
-#&gt;                  -0.85928                   -0.46826  
-#&gt; 
+#&gt;               (Intercept)                   distance  strengtheven_short_handed
+#&gt;                  -0.00938                   -0.00565                    0.26224
+#&gt;        strengthpower_play       strengthshort_handed
+#&gt;                  -0.85928                   -0.46826
+#&gt;
 #&gt; Degrees of Freedom: 9109 Total (i.e. Null);  9105 Residual
-#&gt; Null Deviance:	    12500 
+#&gt; Null Deviance:	    12500
 #&gt; Residual Deviance: 12500 	AIC: 12500
 ```
 
@@ -502,8 +502,8 @@ cls_fit
 
 
 ```r
-stan_wflow &lt;- 
-  cls_wflow %&gt;% 
+stan_wflow &lt;-
+  cls_wflow %&gt;%
   update_model(spec_stan)
 
 set.seed(21)
@@ -512,10 +512,10 @@ stan_fit
 #&gt; ══ Workflow [trained] ═══════════════════════════════════════════════════════════════
 #&gt; Preprocessor: Formula
 #&gt; Model: logistic_reg()
-#&gt; 
+#&gt;
 #&gt; ── Preprocessor ─────────────────────────────────────────────────────────────────────
 #&gt; on_goal ~ distance + strength
-#&gt; 
+#&gt;
 #&gt; ── Model ────────────────────────────────────────────────────────────────────────────
 #&gt; stan_glm
 #&gt;  family:       binomial [logit]
@@ -524,12 +524,12 @@ stan_fit
 #&gt;  predictors:   5
 #&gt; ------
 #&gt;                           Median MAD_SD
-#&gt; (Intercept)                0.0    0.0  
-#&gt; distance                   0.0    0.0  
-#&gt; strengtheven_short_handed  0.3    1.6  
-#&gt; strengthpower_play        -0.9    0.6  
-#&gt; strengthshort_handed      -0.7    1.4  
-#&gt; 
+#&gt; (Intercept)                0.0    0.0
+#&gt; distance                   0.0    0.0
+#&gt; strengtheven_short_handed  0.3    1.6
+#&gt; strengthpower_play        -0.9    0.6
+#&gt; strengthshort_handed      -0.7    1.4
+#&gt;
 #&gt; ------
 #&gt; * For help interpreting the printed output see ?print.stanreg
 #&gt; * For info on the priors used see ?prior_summary.stanreg
@@ -538,16 +538,16 @@ stan_fit
 ---
 # Workflows
 
-Once the first model is fit, the preprocessor (i.e. the formula) is processed and the model matrix is formed. 
+Once the first model is fit, the preprocessor (i.e. the formula) is processed and the model matrix is formed.
 
-New models don't need to repeat those computations. 
+New models don't need to repeat those computations.
 
-Some other nice features: 
+Some other nice features:
 
-* Workflows are smarter with data than `model.matrix()` in terms of new factor levels. 
+* Workflows are smarter with data than `model.matrix()` in terms of new factor levels.
 * Other preprocessors can be used: recipes and `dplyr::select()` statements (that do no data processing).
-* As will be seen later, they can help organize your work when a sequence of models are used. 
-* A workflow captures the entire modeling process (mentioned earlier) and a simple `fit()` and `predict()` sequence are used for all of the estimation parts. 
+* As will be seen later, they can help organize your work when a sequence of models are used.
+* A workflow captures the entire modeling process (mentioned earlier) and a simple `fit()` and `predict()` sequence are used for all of the estimation parts.
 
 ---
 # Using workflows to predict  &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
@@ -561,9 +561,9 @@ shuffled_data &lt;- map_dfc(nhl_train, ~ sample(.x, size = 10))
 predict(stan_fit, shuffled_data) %&gt;% slice(1:3)
 #&gt; # A tibble: 3 × 1
 #&gt;   .pred_class
-#&gt;   &lt;fct&gt;      
-#&gt; 1 yes        
-#&gt; 2 yes        
+#&gt;   &lt;fct&gt;
+#&gt; 1 yes
+#&gt; 2 yes
 #&gt; 3 yes
 predict(stan_fit, shuffled_data, type = "conf_int") %&gt;% slice(1:3)
 #&gt; # A tibble: 3 × 4
@@ -582,7 +582,7 @@ predict(stan_fit, shuffled_data, type = "conf_int") %&gt;% slice(1:3)
 
 * The predictions will always be inside a **tibble**.
 * The column names and types are **unsurprising**.
-* The number of rows in `new_data` and the output **are the same**. 
+* The number of rows in `new_data` and the output **are the same**.
 
 ]
 .pull-right-a-little[
@@ -591,21 +591,21 @@ predict(stan_fit, shuffled_data, type = "conf_int") %&gt;% slice(1:3)
 
 ]
 
-This enables the use of `bind_cols()` to combine the original data and the predictions. 
+This enables the use of `bind_cols()` to combine the original data and the predictions.
 
 
 ---
 # Evaluating models  &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
 
-tidymodels has a [lot of performance metrics](https://yardstick.tidymodels.org/reference/index.html) for different types of models (e.g. binary classification, etc). 
+tidymodels has a [lot of performance metrics](https://yardstick.tidymodels.org/reference/index.html) for different types of models (e.g. binary classification, etc).
 
-Each takes a tibble as an input along with the observed and predicted column names: 
+Each takes a tibble as an input along with the observed and predicted column names:
 
 
 ```r
-pred_results &lt;- 
-  predict(stan_fit, shuffled_data) %&gt;% 
-  bind_cols(predict(stan_fit, shuffled_data, type = "prob")) %&gt;% 
+pred_results &lt;-
+  predict(stan_fit, shuffled_data) %&gt;%
+  bind_cols(predict(stan_fit, shuffled_data, type = "prob")) %&gt;%
   bind_cols(shuffled_data)
 
 # Data was randomized; these results should be bad
@@ -620,7 +620,7 @@ pred_results %&gt;% roc_auc(truth = on_goal, .pred_no)
 ---
 # Multiple metrics/KPIs &lt;img src="images/yardstick.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
 
-A _metric set_ can bundle multiple statistics: 
+A _metric set_ can bundle multiple statistics:
 
 
 ```r
@@ -631,7 +631,7 @@ pred_results %&gt;% cls_metrics(truth = on_goal, estimate = .pred_class, .pred_n
 #&gt; # A tibble: 2 × 3
 #&gt;   .metric  .estimator .estimate
 #&gt;   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
-#&gt; 1 accuracy binary         0.7  
+#&gt; 1 accuracy binary         0.7
 #&gt; 2 roc_auc  binary         0.429
 ```
 
@@ -639,7 +639,7 @@ pred_results %&gt;% cls_metrics(truth = on_goal, estimate = .pred_class, .pred_n
 ---
 # broom methods &lt;img src="images/broom.svg" class="title-hex"&gt;
 
-&lt;span class="pkg"&gt;parsnip&lt;/span&gt; and &lt;span class="pkg"&gt;workflow&lt;/span&gt; fits have corresponding &lt;span class="pkg"&gt;broom&lt;/span&gt; tidiers: 
+&lt;span class="pkg"&gt;parsnip&lt;/span&gt; and &lt;span class="pkg"&gt;workflow&lt;/span&gt; fits have corresponding &lt;span class="pkg"&gt;broom&lt;/span&gt; tidiers:
 
 
 ```r
@@ -652,10 +652,10 @@ tidy(cls_fit)
 #&gt; # A tibble: 5 × 5
 #&gt;   term                      estimate std.error statistic    p.value
 #&gt;   &lt;chr&gt;                        &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;
-#&gt; 1 (Intercept)               -0.00938   0.0457     -0.205 0.837     
+#&gt; 1 (Intercept)               -0.00938   0.0457     -0.205 0.837
 #&gt; 2 distance                  -0.00565   0.00126    -4.50  0.00000690
-#&gt; 3 strengtheven_short_handed  0.262     1.42        0.185 0.853     
-#&gt; 4 strengthpower_play        -0.859     0.585      -1.47  0.142     
+#&gt; 3 strengtheven_short_handed  0.262     1.42        0.185 0.853
+#&gt; 4 strengthpower_play        -0.859     0.585      -1.47  0.142
 #&gt; 5 strengthshort_handed      -0.468     1.23       -0.382 0.702
 ```
 

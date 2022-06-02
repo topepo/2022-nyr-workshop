@@ -174,7 +174,7 @@ We'll demonstrate the `r pkg(recipes)` package for all of your data needs.
 ---
 # Recipes prepare your data for modeling
 
-The package is an extensible framework for pipeable sequences of feature engineering steps  that provide preprocessing tools to be applied to data. 
+The package is an extensible framework for pipeable sequences of feature engineering steps that provide preprocessing tools to be applied to data. 
     
 Statistical parameters for the steps can be estimated from an initial data set and then applied to other data sets. 
     
@@ -207,7 +207,7 @@ nhl_rec <-
   step_date(date_time, features = c("dow", "month", "year")) #<<
 ```
 
-This creates three new columns in the data based on the date. Now that the day-of-the-week column is a factor.
+This creates three new columns in the data based on the date. Note that the day-of-the-week column is a factor.
 
 ---
 # A first recipe - work with dates `r I(hexes(c("recipes")))`
@@ -533,7 +533,7 @@ When `predict()` is called, the fitted recipe is applied to the new data before 
 predict(nhl_fit, nhl_test)
 ```
 
-You don't need to do anything else
+You don't need to do anything else.
 
 
 ---
@@ -545,7 +545,7 @@ You don't need to do anything else
 tidy(nhl_rec)
 ```
 
-After fitting the recipe, you might want access to the statistics from each step. We can pull the fitted recipe from the workflow and choose which step to tidy by number or `id`
+After fitting the recipe, you might want access to the statistics from each step. We can pull the fitted recipe from the workflow and choose which step to tidy by number or `id`.
 
 ---
 # Tidying a recipe `r I(hexes(c("broom")))`
@@ -562,7 +562,7 @@ nhl_fit %>%
 
 90% of the time, you will want to use a workflow to estimate and apply a recipe. 
 
-If you have an error, the original recipe object (e.g. `nhl_rec`) can be estimated manually with a function called `bake()` (analogous to `fit()`). 
+If you have an error, the original recipe object (e.g. `nhl_rec`) can be estimated manually with a function called `prep()`. It is analogous to `fit()`. 
 
 This returns the fitted recipe. This can help debug any issues. 
 
@@ -579,7 +579,7 @@ Another function (`bake()`) is analogous to `predict()` and gives you the proces
 * There are `r pkg(recipes)`-adjacent packages with more steps: `r pkg(embed)`, `r pkg(timetk)`, `r pkg(textrecipes)`, and others. 
   * If you do any text processing, `r pkg(textrecipes)` is `r emo::ji("cool")`<sup>`r emo::ji("infinity")`</sup>.
     * Julia and Emil have written an amazing text processing book: [_Supervised Machine Learning for Text Analysis in R_](https://smltar.com/)
-* There are a lot of ways to handle [categorical predictors](https://recipes.tidymodels.org/articles/Dummies.html) even those with novel levels. 
+* There are a lot of ways to handle [categorical predictors](https://recipes.tidymodels.org/articles/Dummies.html), even those with novel levels. 
 * Several `r pkg(dplyr)` steps exist, such as `step_mutate()`. 
 
 
