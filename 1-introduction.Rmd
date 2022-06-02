@@ -100,8 +100,8 @@ The best way to get started with tidymodels is to use the `r pkg(tidymodels)` me
 Some helpful links:
 
  * List of [all tidymodels functions](https://www.tidymodels.org/find/#search-all-of-tidymodels)
- * List of [all models](https://www.tidymodels.org/find/parsnip/)
- * List of [all preprocessing steps](https://www.tidymodels.org/find/recipes/)
+ * List of [all parsnip models](https://www.tidymodels.org/find/parsnip/)
+ * List of [all recipe steps](https://www.tidymodels.org/find/recipes/)
 
 
 ---

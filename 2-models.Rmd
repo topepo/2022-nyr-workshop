@@ -210,7 +210,7 @@ From a non-statistical perspective, many consumers of complex models emphasize t
 
 # Large data sets
 
-When a large amount of data is available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure. 
+When a large amount of data are available, it might seem like a good idea to put a large amount into the training set. _Personally_, I think that this causes more trouble than it is worth due to diminishing returns on performance and the added cost and complexity of the required infrastructure. 
 
 Alternatively, it is probably a better idea to reserve good percentages of the data for specific parts of the modeling process. For example: 
 

@@ -566,7 +566,7 @@ If you have an error, the original recipe object (e.g. `nhl_rec`) can be estimat
 
 This returns the fitted recipe. This can help debug any issues. 
 
-Another function, `bake()`, is analogous to `predict()` and gives you the processed data back. 
+Another function (`bake()`) is analogous to `predict()` and gives you the processed data back. 
 
 
 ---
