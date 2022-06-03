@@ -168,10 +168,11 @@ Using _resampling_ to estimate performance can help identify parameters that lea
 
 The cost is computational time. 
 
+
 ---
 # Overfitting with machine learning
 
-```{r overfitting, echo = FALSE, out.width = '60%', fig.width=9, fig.height=3.75, fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
+```{r overfitting-train, echo = FALSE, out.width = '90%', fig.width=9, fig.height=3.75, fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
 data(parabolic)
 
 set.seed(15)
@@ -241,7 +242,7 @@ te_plot <-
   ) +
   geom_contour(aes(z = .pred_Class1), breaks = 0.5, col = "black") +
   facet_wrap( ~ label, nrow = 1) +
-  ggtitle("Test Set") +
+  ggtitle("Test Set (Simulated Data)") +
   labs(x = "Predictor A", y = "Predictor B") 
 
 tr_plot <-
@@ -261,12 +262,19 @@ tr_plot <-
   ) +
   geom_contour(aes(z = .pred_Class1), breaks = 0.5, col = "black") +
   facet_wrap( ~ label, nrow = 1) +
-  ggtitle("Training Set") +
+  ggtitle("Training Set (Simulated Data)") +
   labs(x = "Predictor A", y = "Predictor B")
 
-tr_plot 
-te_plot
+tr_plot + lims(x = c(-6, 5), y = c(-6, 5))
 ```
+
+---
+# Overfitting with machine learning
+
+```{r overfitting-test, echo = FALSE, out.width = '90%', fig.width=9, fig.height=3.75, fig.align='center', dev = 'svg', dev.args = list(bg = "transparent")}
+te_plot + lims(x = c(-6, 5), y = c(-6, 5))
+```
+
 
 ---
 # Choosing tuning parameters `r I(hexes(c("recipes", "workflows", "parsnip", "tune")))`

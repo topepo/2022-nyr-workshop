@@ -53,7 +53,7 @@ class: inverse, middle, center
 ---
 # Tuning parameters
 
-These are model or preprocessing parameters that are important but cannot be estimated directly form the data.
+These are model or preprocessing parameters that are important but cannot be estimated directly from the data. 
 
 Some examples:
 
@@ -61,9 +61,9 @@ Some examples:
 
 * Tree depth in decision trees.
 
-* Number of neighbors in a K-nearest neighbor model.
+* Number of neighbors in a K-nearest neighbor model. 
 
-* Activation function (e.g. sigmoidal, ReLu) in neural networks.
+* Activation function (e.g. sigmoidal, ReLu) in neural networks. 
 
 * Number of PCA components to retain.
 
@@ -74,42 +74,49 @@ Some examples:
 
 * Data distribution in survival models.
 
-* Spline degrees of freedom.
+* Spline degrees of freedom. 
 ]
 
 ---
 # Optimizing tuning parameters
 
-The main approach is to try different values and measure their performance. This can lead us to good values for these parameters.
+The main approach is to try different values and measure their performance. This can lead us to good values for these parameters. 
 
-The main two classes of optimization models are:
+The main two classes of optimization models are: 
 
- * _Grid search_ where a pre-defined set of candidate values are tested.
+ * _Grid search_ where a pre-defined set of candidate values are tested. 
+ 
+ * _Iterative search_ methods suggest/estimate new values of candidate parameters to evaluate. 
 
- * _Iterative search_ methods suggest/estimate new values of candidate parameters to evaluate.
-
-Once the value(s) of the parameter(s) are determine, a model can be finalized by fitting the model to the entire training set.
+Once the value(s) of the parameter(s) are determined, a model can be finalized by fitting the model to the entire training set. 
 
 
 ---
 # Measuring the effect of tuning parameters
 
-We need performance metrics to tell us which candidate values are good and which are not.
+We need performance metrics to tell us which candidate values are good and which are not. 
 
-Using the test set, or simply re-predicting the training set, are very bad ideas.
+Using the test set, or simply re-predicting the training set, are very bad ideas. 
 
-Since tuning parameters often control complexity, they can often lead to [_overfitting_](https://www.tmwr.org/tuning.html#overfitting-bad).
+Since tuning parameters often control complexity, they can often lead to [_overfitting_](https://www.tmwr.org/tuning.html#overfitting-bad). 
 
-* This is where the model does very well on the training set but poorly on new data.
+* This is where the model does very well on the training set but poorly on new data. 
 
-Using _resampling_ to estimate performance can help identify parameters that lead to overfitting.
+Using _resampling_ to estimate performance can help identify parameters that lead to overfitting. 
 
-The cost is computational time.
+The cost is computational time. 
+
 
 ---
 # Overfitting with machine learning
 
-&lt;img src="images/tuning-overfitting-1.svg" width="60%" style="display: block; margin: auto;" /&gt;&lt;img src="images/tuning-overfitting-2.svg" width="60%" style="display: block; margin: auto;" /&gt;
+&lt;img src="images/tuning-overfitting-train-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
+---
+# Overfitting with machine learning
+
+&lt;img src="images/tuning-overfitting-test-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
 
 ---
 # Choosing tuning parameters &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
@@ -120,21 +127,21 @@ Let's take our previous model and add a few changes:
 ```r
 glm_spec &lt;- logistic_reg() # Use the default `glm` engine
 
-glmn_rec &lt;-
-  recipe(on_goal ~ ., data = nhl_train) %&gt;%
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
-  step_holiday(date_time) %&gt;%
-  step_rm(date_time) %&gt;%
-  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
-  step_dummy(all_nominal_predictors()) %&gt;%
-  step_zv(all_predictors()) %&gt;%
-  step_ns(angle, deg_free = 10) %&gt;%
-  step_ns(distance, deg_free = 10) %&gt;%
-  step_normalize(all_numeric_predictors())
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
 
-glmn_wflow &lt;-
-  workflow() %&gt;%
-  add_model(glm_spec) %&gt;%
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
   add_recipe(glmn_rec)
 ```
 
@@ -143,25 +150,25 @@ glmn_wflow &lt;-
 
 
 ```r
-glm_spec &lt;-
-  logistic_reg() %&gt;%
+glm_spec &lt;- 
+  logistic_reg() %&gt;% 
 * set_engine("glmnet")
 
-glmn_rec &lt;-
-  recipe(on_goal ~ ., data = nhl_train) %&gt;%
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
-  step_holiday(date_time) %&gt;%
-  step_rm(date_time) %&gt;%
-  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
-  step_dummy(all_nominal_predictors()) %&gt;%
-  step_zv(all_predictors()) %&gt;%
-  step_ns(angle, deg_free = 10) %&gt;%
-  step_ns(distance, deg_free = 10) %&gt;%
-  step_normalize(all_numeric_predictors())
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
 
-glmn_wflow &lt;-
-  workflow() %&gt;%
-  add_model(glm_spec) %&gt;%
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
   add_recipe(glmn_rec)
 ```
 
@@ -170,25 +177,25 @@ glmn_wflow &lt;-
 
 
 ```r
-glm_spec &lt;-
+glm_spec &lt;- 
 * logistic_reg(penalty, mixture) %&gt;%
-  set_engine("glmnet")
+  set_engine("glmnet") 
 
-glmn_rec &lt;-
-  recipe(on_goal ~ ., data = nhl_train) %&gt;%
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
-  step_holiday(date_time) %&gt;%
-  step_rm(date_time) %&gt;%
-  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
-  step_dummy(all_nominal_predictors()) %&gt;%
-  step_zv(all_predictors()) %&gt;%
-  step_ns(angle, deg_free = 10) %&gt;%
-  step_ns(distance, deg_free = 10) %&gt;%
-  step_normalize(all_numeric_predictors())
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
+  step_ns(angle, deg_free = 10) %&gt;% 
+  step_ns(distance, deg_free = 10) %&gt;% 
+  step_normalize(all_numeric_predictors()) 
 
-glmn_wflow &lt;-
-  workflow() %&gt;%
-  add_model(glm_spec) %&gt;%
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
   add_recipe(glmn_rec)
 ```
 
@@ -198,40 +205,40 @@ glmn_wflow &lt;-
 
 
 ```r
-glm_spec &lt;-
+glm_spec &lt;- 
 * logistic_reg(penalty = tune(), mixture = tune()) %&gt;%
-  set_engine("glmnet")
+  set_engine("glmnet") 
 
-glmn_rec &lt;-
-  recipe(on_goal ~ ., data = nhl_train) %&gt;%
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
-  step_holiday(date_time) %&gt;%
-  step_rm(date_time) %&gt;%
-  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
-  step_dummy(all_nominal_predictors()) %&gt;%
-  step_zv(all_predictors()) %&gt;%
+glmn_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_zv(all_predictors()) %&gt;% 
 * step_ns(angle, deg_free = tune("angle")) %&gt;%
 * step_ns(distance, deg_free = tune("distance")) %&gt;%
-  step_normalize(all_numeric_predictors())
+  step_normalize(all_numeric_predictors()) 
 
-glmn_wflow &lt;-
-  workflow() %&gt;%
-  add_model(glm_spec) %&gt;%
+glmn_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(glm_spec) %&gt;% 
   add_recipe(glmn_rec)
 ```
 
 ---
 # Grid search
 
-This is the most basic (but very effective) way for tuning models.
+This is the most basic (but very effective) way for tuning models. 
 
-tidymodels has pre-defined information on tuning parameters, such as their type, range, transformations, etc.
+tidymodels has pre-defined information on tuning parameters, such as their type, range, transformations, etc. 
 
-A grid can be created manually or automatically.
+A grid can be created manually or automatically. 
 
-The `extract_parameter_set_dials()` function extracts the tuning parameters and the info.
+The `extract_parameter_set_dials()` function extracts the tuning parameters and the info. 
 
-The `grid_*()` functions can make a grid.
+The `grid_*()` functions can make a grid. 
 
 
 ---
@@ -240,7 +247,7 @@ The `grid_*()` functions can make a grid.
 .pull-left[
 
 ```r
-glmn_wflow %&gt;%
+glmn_wflow %&gt;% 
   extract_parameter_set_dials()
 ```
 This type of object can be updated (e.g. to change the ranges, etc)
@@ -250,7 +257,7 @@ This type of object can be updated (e.g. to change the ranges, etc)
 
 ```
 #&gt; Collection of 4 parameters for tuning
-#&gt;
+#&gt; 
 #&gt;  identifier     type    object
 #&gt;     penalty  penalty nparam[+]
 #&gt;     mixture  mixture nparam[+]
@@ -267,18 +274,18 @@ This type of object can be updated (e.g. to change the ranges, etc)
 
 ```r
 set.seed(2)
-grid &lt;-
-  glmn_wflow %&gt;%
-  extract_parameter_set_dials() %&gt;%
+grid &lt;- 
+  glmn_wflow %&gt;% 
+  extract_parameter_set_dials() %&gt;% 
   grid_latin_hypercube(size = 25)
 
 grid
 ```
 
 
-This is a type of _space-filling design_.
+This is a type of _space-filling design_. 
 
-It tends to do much better than random grids and is (usually) more efficient than regular grids.
+It tends to do much better than random grids and is (usually) more efficient than regular grids. 
 
 ]
 .pull-right[
@@ -305,18 +312,18 @@ It tends to do much better than random grids and is (usually) more efficient tha
 
 ```r
 set.seed(2)
-grid &lt;-
-  glmn_wflow %&gt;%
-  extract_parameter_set_dials() %&gt;%
+grid &lt;- 
+  glmn_wflow %&gt;% 
+  extract_parameter_set_dials() %&gt;% 
   grid_latin_hypercube(size = 25)
 
-grid %&gt;%
-  ggplot(aes(penalty, mixture, col = angle)) +
-  geom_point(cex = 4) +
+grid %&gt;% 
+  ggplot(aes(penalty, mixture, col = angle)) + 
+  geom_point(cex = 4) + 
   scale_x_log10()
 ```
 
-Note that `penalty` was generated in log-10 units.
+Note that `penalty` was generated in log-10 units. 
 ]
 
 .pull-right[
@@ -326,24 +333,24 @@ Note that `penalty` was generated in log-10 units.
 ---
 # Grid search &lt;img src="images/tune.svg" class="title-hex"&gt;
 
-The `tune_*()` functions can be used to tune models.
+The `tune_*()` functions can be used to tune models. 
 
-`tune_grid()` is pretty representative of their syntax (and is similar to `fit_resamples()`):
+`tune_grid()` is pretty representative of their syntax (and is similar to `fit_resamples()`): 
 
 
 ```r
 ctrl &lt;- control_grid(save_pred = TRUE)
 
 set.seed(9)
-glmn_res &lt;-
-  glmn_wflow %&gt;%
+glmn_res &lt;- 
+  glmn_wflow %&gt;% 
   tune_grid(resamples = nhl_rs, grid = grid) # 'grid' = integer for automatic grids
 glmn_res
 #&gt; # Tuning results
-#&gt; # 10-fold cross-validation
+#&gt; # 10-fold cross-validation 
 #&gt; # A tibble: 10 × 4
-#&gt;   splits             id     .metrics          .notes
-#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;
+#&gt;   splits             id     .metrics          .notes          
+#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;          
 #&gt; 1 &lt;split [8199/911]&gt; Fold01 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
 #&gt; 2 &lt;split [8199/911]&gt; Fold02 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
 #&gt; 3 &lt;split [8199/911]&gt; Fold03 &lt;tibble [50 × 8]&gt; &lt;tibble [0 × 3]&gt;
@@ -372,7 +379,7 @@ autoplot(glmn_res)
 collect_metrics(glmn_res)
 #&gt; # A tibble: 50 × 10
 #&gt;       penalty mixture angle distance .metric  .estimator  mean     n std_err .config
-#&gt;         &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;
+#&gt;         &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;  
 #&gt; 1 0.311         0.271    10        3 accuracy binary     0.547    10 0.00667 Prepro…
 #&gt; 2 0.311         0.271    10        3 roc_auc  binary     0.617    10 0.00839 Prepro…
 #&gt; 3 0.000000752   0.649     9        6 accuracy binary     0.618    10 0.00847 Prepro…
@@ -383,8 +390,8 @@ collect_metrics(glmn_res)
 
 collect_metrics(glmn_res, summarize = FALSE)
 #&gt; # A tibble: 500 × 9
-#&gt;   id     penalty mixture angle distance .metric  .estimator .estimate .config
-#&gt;   &lt;chr&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;
+#&gt;   id     penalty mixture angle distance .metric  .estimator .estimate .config       
+#&gt;   &lt;chr&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;         
 #&gt; 1 Fold01   0.311   0.271    10        3 accuracy binary         0.513 Preprocessor0…
 #&gt; 2 Fold01   0.311   0.271    10        3 roc_auc  binary         0.574 Preprocessor0…
 #&gt; 3 Fold02   0.311   0.271    10        3 accuracy binary         0.538 Preprocessor0…
@@ -397,14 +404,14 @@ collect_metrics(glmn_res, summarize = FALSE)
 ---
 # Picking a parameter combination &lt;img src="images/tune.svg" class="title-hex"&gt;
 
-You can create a tibble of your own or use one of the `tune::select_*()` functions:
+You can create a tibble of your own or use one of the `tune::select_*()` functions: 
 
 
 ```r
 show_best(glmn_res, metric = "roc_auc")
 #&gt; # A tibble: 5 × 10
-#&gt;    penalty mixture angle distance .metric .estimator  mean     n std_err .config
-#&gt;      &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;
+#&gt;    penalty mixture angle distance .metric .estimator  mean     n std_err .config    
+#&gt;      &lt;dbl&gt;   &lt;dbl&gt; &lt;int&gt;    &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;      
 #&gt; 1 4.93e- 4   0.565     7       14 roc_auc binary     0.658    10 0.00761 Preprocess…
 #&gt; 2 1.41e- 8   0.216     7       12 roc_auc binary     0.657    10 0.00753 Preprocess…
 #&gt; 3 6.40e- 4   0.544     6       11 roc_auc binary     0.657    10 0.00760 Preprocess…
@@ -416,18 +423,18 @@ show_best(glmn_res, metric = "roc_auc")
 ---
 # Boosted Trees
 
-An ensemble method of tree-based models.
+An ensemble method of tree-based models. 
 
-A tree-based model creates a series of splits on predictors that partition them into two groups to maximize the purity of the resulting sets.
+A tree-based model creates a series of splits on predictors that partition them into two groups to maximize the purity of the resulting sets. 
 
-This forms a series of if/then statements that make up a tree structure.
+This forms a series of if/then statements that make up a tree structure. 
 
-The creation of the tree has two phases:
+The creation of the tree has two phases: 
 
- * The _growing_ phase where splits are made until we meet some condition
-    * maximum depth,
+ * The _growing_ phase where splits are made until we meet some condition   
+    * maximum depth, 
     * run out of data
- * Tree _pruning_ where the ends of the trees are removed until the "right sized" tree is found.
+ * Tree _pruning_ where the ends of the trees are removed until the "right sized" tree is found.  
 
 
 ---
@@ -438,17 +445,17 @@ The creation of the tree has two phases:
 ---
 # Boosting
 
-Boosting methods fit a sequence of tree-based models.
+Boosting methods fit a sequence of tree-based models. 
 
 Each is dependent on the last and tries to compensate to any poor results in the previous models
 
-* This is akin to gradient-based steepest ascent methods from calculus.
+* This is akin to gradient-based steepest ascent methods from calculus. 
 
 Most modern boosting methods have _a lot_ of tuning parameters.
  * For tree growth and pruning (`min_n`, `max_depth`. etc).
  * For boosting (`trees`, `stop_iter`, `learn_rate`)
 
-We'll use _early stopping_ where we stop boosting when a few iterations produces consecutively worse results.
+We'll use _early stopping_ where we stop boosting when a few iterations produces consecutively worse results. 
 
 ---
 # Boosting &lt;img src="images/workflows.svg" class="title-hex"&gt;&lt;img src="images/tune.svg" class="title-hex"&gt;&lt;img src="images/recipes.svg" class="title-hex"&gt;&lt;img src="images/parsnip.svg" class="title-hex"&gt;
@@ -464,21 +471,21 @@ xgb_spec &lt;-
     learn_rate = tune(),
     loss_reduction = tune()
   ) %&gt;%
-  set_mode("classification") %&gt;%
+  set_mode("classification") %&gt;% 
   set_engine("xgboost", validation = 1/10) # &lt;- for better early stopping
 
-xgb_rec &lt;-
-  recipe(on_goal ~ ., data = nhl_train) %&gt;%
-  step_date(date_time, features = c("dow", "month", "year")) %&gt;%
-  step_holiday(date_time) %&gt;%
-  step_rm(date_time) %&gt;%
-  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;%
+xgb_rec &lt;- 
+  recipe(on_goal ~ ., data = nhl_train) %&gt;% 
+  step_date(date_time, features = c("dow", "month", "year")) %&gt;% 
+  step_holiday(date_time) %&gt;% 
+  step_rm(date_time) %&gt;% 
+  step_lencode_mixed(player, outcome = vars(on_goal)) %&gt;% 
   step_dummy(all_nominal_predictors()) %&gt;%  # &lt;- unusual, requested by xgboost
   step_zv(all_predictors())
 
-xgb_wflow &lt;-
-  workflow() %&gt;%
-  add_model(xgb_spec) %&gt;%
+xgb_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(xgb_spec) %&gt;% 
   add_recipe(xgb_rec)
 ```
 
@@ -489,11 +496,11 @@ xgb_wflow &lt;-
 
 .font80[
 
-Grid search, combined with resampling, ends up fitting a lot of models.
+Grid search, combined with resampling, ends up fitting a lot of models. 
 
-These models don't depend on one another and can be run in parallel.
+These models don't depend on one another and can be run in parallel. 
 
-We can use a _parallel backend_ to do this:
+We can use a _parallel backend_ to do this: 
 
 ]
 
@@ -513,7 +520,7 @@ registerDoParallel(cl)
 ---
 # Running in parallel
 
-There are various degrees of speed-ups that are fairly linear up until the number of physical cores.
+There are various degrees of speed-ups that are fairly linear up until the number of physical cores. 
 
 &lt;img src="images/tuning-unnamed-chunk-14-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
 
@@ -525,15 +532,15 @@ This will take some time to run...
 
 ```r
 set.seed(9)
-xgb_res &lt;-
-  xgb_wflow %&gt;%
+xgb_res &lt;- 
+  xgb_wflow %&gt;% 
   tune_grid(resamples = nhl_rs, grid = 20)
 xgb_res
 #&gt; # Tuning results
-#&gt; # 10-fold cross-validation
+#&gt; # 10-fold cross-validation 
 #&gt; # A tibble: 10 × 4
-#&gt;   splits             id     .metrics          .notes
-#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;
+#&gt;   splits             id     .metrics          .notes          
+#&gt;   &lt;list&gt;             &lt;chr&gt;  &lt;list&gt;            &lt;list&gt;          
 #&gt; 1 &lt;split [8199/911]&gt; Fold01 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
 #&gt; 2 &lt;split [8199/911]&gt; Fold02 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
 #&gt; 3 &lt;split [8199/911]&gt; Fold03 &lt;tibble [40 × 9]&gt; &lt;tibble [0 × 3]&gt;
@@ -565,23 +572,23 @@ autoplot(xgb_res)
 best_auc &lt;- select_best(xgb_res, metric = "roc_auc")
 best_auc
 #&gt; # A tibble: 1 × 6
-#&gt;   min_n tree_depth learn_rate loss_reduction stop_iter .config
-#&gt;   &lt;int&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;     &lt;int&gt; &lt;chr&gt;
+#&gt;   min_n tree_depth learn_rate loss_reduction stop_iter .config              
+#&gt;   &lt;int&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;     &lt;int&gt; &lt;chr&gt;                
 #&gt; 1    26         15     0.0365           2.51        17 Preprocessor1_Model11
 
 xgb_wflow &lt;-
-  xgb_wflow %&gt;%
+  xgb_wflow %&gt;% 
   finalize_workflow(best_auc)
 
-test_res &lt;-
-  xgb_wflow %&gt;%
+test_res &lt;- 
+  xgb_wflow %&gt;% 
   last_fit(split = nhl_split)
 test_res
 #&gt; # Resampling results
-#&gt; # Manual resampling
+#&gt; # Manual resampling 
 #&gt; # A tibble: 1 × 6
-#&gt;   splits              id               .metrics .notes   .predictions .workflow
-#&gt;   &lt;list&gt;              &lt;chr&gt;            &lt;list&gt;   &lt;list&gt;   &lt;list&gt;       &lt;list&gt;
+#&gt;   splits              id               .metrics .notes   .predictions .workflow 
+#&gt;   &lt;list&gt;              &lt;chr&gt;            &lt;list&gt;   &lt;list&gt;   &lt;list&gt;       &lt;list&gt;    
 #&gt; 1 &lt;split [9110/3037]&gt; train/test split &lt;tibble&gt; &lt;tibble&gt; &lt;tibble&gt;     &lt;workflow&gt;
 ```
 
@@ -592,10 +599,10 @@ test_res
 ```r
 collect_metrics(test_res)
 #&gt; # A tibble: 2 × 4
-#&gt;   .metric  .estimator .estimate .config
-#&gt;   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;
-#&gt; 1 accuracy binary         0.690 Preprocessor1_Model1
-#&gt; 2 roc_auc  binary         0.739 Preprocessor1_Model1
+#&gt;   .metric  .estimator .estimate .config             
+#&gt;   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;               
+#&gt; 1 accuracy binary         0.707 Preprocessor1_Model1
+#&gt; 2 roc_auc  binary         0.760 Preprocessor1_Model1
 
 # Resampling results
 show_best(xgb_res, metric = "roc_auc", n = 1)
@@ -610,8 +617,8 @@ The final fitted workflow, fit using the training set, can be pulled out:
 
 
 ```r
-final_xgb_wflow &lt;-
-  test_res %&gt;%
+final_xgb_wflow &lt;- 
+  test_res %&gt;% 
   extract_workflow()
 ```
 
@@ -623,9 +630,9 @@ final_xgb_wflow &lt;-
 .pull-left[
 
 ```r
-test_res %&gt;%
-  collect_predictions() %&gt;%
-  roc_curve(on_goal, .pred_yes) %&gt;%
+test_res %&gt;% 
+  collect_predictions() %&gt;% 
+  roc_curve(on_goal, .pred_yes) %&gt;% 
   autoplot()
 ```
 
@@ -639,16 +646,16 @@ test_res %&gt;%
 ---
 # Going forward
 
-There are a lot more things that tidymodels can do:
+There are a lot more things that tidymodels can do: 
 
-* Faster grid search using [racing methods](https://www.tmwr.org/grid-search.html#racing).
+* Faster grid search using [racing methods](https://www.tmwr.org/grid-search.html#racing). 
 * [Iterative optimization](https://www.tmwr.org/iterative-search.html) tools.
-* Creating a grid of preprocessors and model for [faster screening](https://www.tmwr.org/workflow-sets.html).
+* Creating a grid of preprocessors and model for [faster screening](https://www.tmwr.org/workflow-sets.html). 
 * [Deploying your model](https://vetiver.tidymodels.org/articles/vetiver.html) with vetiver.
 
 
 
-
+ 
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
